@@ -66,7 +66,7 @@ parser.add_argument("maxIters", help = "Enter Max no. of iterations: ", type = i
 # parser.add_argument("lmbdaSimplex", help = "Enter lambda Simplex :", type = float)
 parser.add_argument("lmbdaF", help = "Enter lambda F: ", type = float)
 parser.add_argument("lmbdaTV", help = "Enter lambda TV: ", type = float)
-parser.add_argument("k", help = "Enter orthogonality penalty: ", type = float)
+parser.add_argument("lmbdaOrtho", help = "Enter orthogonality penalty: ", type = float)
 parser.add_argument("samplingFactor", help = "Enter the ratio of dataset to be used: ", type = float)
 parser.add_argument("samplingFactorTest", help = "Enter the ratio of dataset to be used: ", type = float)
 parser.add_argument("lr", help = "learning rate for SGD to be used: ", type = float)
@@ -101,7 +101,7 @@ maxIters = args.maxIters
 # lmbdaSimplex = args.lmbdaSimplex
 lmbdaF = args.lmbdaF
 lmbdaTV = args.lmbdaTV
-k = args.k
+lmbdaOrtho = args.lmbdaOrtho
 samplingFactor = args.samplingFactor
 samplingFactorTest = args.samplingFactorTest
 if samplingFactor > 1:
@@ -184,7 +184,7 @@ classListTest = set([str(x.strip()) for x in classListTestString.strip('[]').str
 samplingAdd = 'samplingFactor'+str(samplingFactor)
 
 # outputFolderName =  outputFolderName+'samplingFactor'+str(samplingFactor)
-outputFolderName = outputFolderName+"Rank:%s-Numgroups:%s-Iters:%s-lmbdaF:%s-lmbdaTV:%s-ortho:%s-lr:%s-wd:%s-P_init-%s"%(Rank1,numGroups,maxIters,lmbdaF,lmbdaTV,k,lr,wd,P_init)
+outputFolderName = outputFolderName+"Rank:%s-Numgroups:%s-Iters:%s-lmbdaF:%s-lmbdaTV:%s-ortho:%s-lr:%s-wd:%s-P_init-%s"%(Rank1,numGroups,maxIters,lmbdaF,lmbdaTV,lmbdaOrtho,lr,wd,P_init)
 if classBased == 'True':
 	# outputFolderName+='-Train-'+str(classListTrainString)+'-Test-'+classListTestString+'-'
 	outputFolderName+='-Train-'+str(len(classListTrain))+'-Test-'+str(len(classListTest))+'-'
@@ -1378,99 +1378,99 @@ for epoch in range(0,numEpochs):
 		
 		
 
-		for i,mat in enumerate(A):
-			print("***** Analysis of A[%d] *****\n"%i)
-			F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, k=k, maxIter = maxIters, compute_fit = True)
-			print("F shape : %s \t"%(F.shape,))
+		# for i,mat in enumerate(A):
+		# 	print("***** Analysis of A[%d] *****\n"%i)
+		# 	F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, k=k, maxIter = maxIters, compute_fit = True)
+		# 	print("F shape : %s \t"%(F.shape,))
 
-			try:
-				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-			except:
-				pass
+		# 	try:
+		# 		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+		# 		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+		# 	except:
+		# 		pass
 
-			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+		# 	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+		# 	generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
 
-			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-			# pdb.set_trace()
-			MutualCoherence = mutualCoherence(F)
-			for j,array in enumerate(mutualCoherenceSF[i]):
-				array.append(MutualCoherence[j])
+		# 	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+		# 	generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+		# 	# pdb.set_trace()
+		# 	MutualCoherence = mutualCoherence(F)
+		# 	for j,array in enumerate(mutualCoherenceSF[i]):
+		# 		array.append(MutualCoherence[j])
 
-			# pdb.set_trace()
-			# print("plotting",mutualCoherenceSF[i])
-			plotLists(mutualCoherenceSF[i],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
+		# 	# pdb.set_trace()
+		# 	# print("plotting",mutualCoherenceSF[i])
+		# 	plotLists(mutualCoherenceSF[i],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
 
-			# for j,layers in enumerate(mutualCoherenceSF):
-			# 	pdb.set_trace()
-			# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
-			# This needs to be changed when using class sampled
-			if classBased == 'True':
-				vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
-				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-				topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-			else:
-				vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
-				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-				topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-			#F.T used because of the notational change
-			# somewhere downstream to properly populate lF
-				# NvF = normalize(vF,axis = 0)
-
-
+		# 	# for j,layers in enumerate(mutualCoherenceSF):
+		# 	# 	pdb.set_trace()
+		# 	# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
+		# 	# This needs to be changed when using class sampled
+		# 	if classBased == 'True':
+		# 		vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
+		# 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
+		# 		topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+		# 	else:
+		# 		vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
+		# 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
+		# 		topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+		# 	#F.T used because of the notational change
+		# 	# somewhere downstream to properly populate lF
+		# 		# NvF = normalize(vF,axis = 0)
 
 
-			# pdb.set_trace()
-			### Class Probabilities
-			classProbMat = vFlFToClassMat(vF,lF)
-			# superClassProbMat = vFlFToClassMat(SvF,SlF)
 
-			numDim = classProbMat.shape[0]
-			fontSize = 10
-			annotations = True
-			if numDim>100:
-				annotations = False
-			elif numDim>10:
-				fontSize *= 10/numDim
 
-			## Computing hellinger
-			classHellinger = pairwiseHellinger(classProbMat)
-			floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# pdb.set_trace()
+		# 	### Class Probabilities
+		# 	classProbMat = vFlFToClassMat(vF,lF)
+		# 	# superClassProbMat = vFlFToClassMat(SvF,SlF)
+
+		# 	numDim = classProbMat.shape[0]
+		# 	fontSize = 10
+		# 	annotations = True
+		# 	if numDim>100:
+		# 		annotations = False
+		# 	elif numDim>10:
+		# 		fontSize *= 10/numDim
+
+		# 	## Computing hellinger
+		# 	classHellinger = pairwiseHellinger(classProbMat)
+		# 	floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 			
-			# superClassHellinger = pairwiseHellinger(superClassProbMat)
-			# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# superClassHellinger = pairwiseHellinger(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 
 
-			## Computing bhattacharyya
-			classBhattacharyya = pairwiseBhattacharyya(classProbMat)
-			floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-			# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
-			# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	## Computing bhattacharyya
+		# 	classBhattacharyya = pairwiseBhattacharyya(classProbMat)
+		# 	floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 
 
 
-			## Computing KL
-			# FKL = pairwiseKL(F)
-			# FKLmeanPerEpoch.append(FKL.mean())
+		# 	## Computing KL
+		# 	# FKL = pairwiseKL(F)
+		# 	# FKLmeanPerEpoch.append(FKL.mean())
 
 
-			classKL = pairwiseKL(classProbMat)
-			# classmeanKLPerEpoch.append(classKL.mean())
-			floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-			# superClassKL = pairwiseKL(superClassProbMat)
-			# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	classKL = pairwiseKL(classProbMat)
+		# 	# classmeanKLPerEpoch.append(classKL.mean())
+		# 	floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# superClassKL = pairwiseKL(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 
-			# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
+		# 	# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
 			
-			# pdb.set_trace()
-			lod = generateReportF(vF,lF)
-			slod = generateReportF(SvF,SlF)
-			# pdb.set_trace()
+		# 	# pdb.set_trace()
+		# 	lod = generateReportF(vF,lF)
+		# 	slod = generateReportF(SvF,SlF)
+		# 	# pdb.set_trace()
 
-			FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
-			FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
+		# 	FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
+		# 	FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
 
 		
 
@@ -1479,8 +1479,9 @@ for epoch in range(0,numEpochs):
 		os.chdir(os.path.join(outputFolderName,epochFolder))
 
 		##### coupled factorization #####
-		F,P,O,LOSSTOTAL,LOSSACT = cnmf(D, A, Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF, lmbdaTV = lmbdaTV, k=k, maxIter = maxIters, compute_fit = True)
+		F,P,O,LOSSTOTAL,LOSSACT = cnmf(D, A, Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF, lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
 		print("F shape : %s \t"%(F.shape,))
+		# pdb.set_trace()
 		# ********** Generating Reports **********
 
 		
@@ -1600,38 +1601,6 @@ for epoch in range(0,numEpochs):
 		elif numDim>10:
 			fontSize *= 10/numDim
 
-		## Computing hellinger
-		classHellinger = pairwiseHellinger(classProbMat)
-		floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-		
-		# superClassHellinger = pairwiseHellinger(superClassProbMat)
-		# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-		## Computing bhattacharyya
-		classBhattacharyya = pairwiseBhattacharyya(classProbMat)
-		floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-		# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
-		# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-
-		## Computing KL
-		FKL = pairwiseKL(F)
-		FKLmeanPerEpoch.append(FKL.mean())
-		classKL = pairwiseKL(classProbMat)
-		floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-		# superClassKL = pairwiseKL(superClassProbMat)
-		# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-		classmeanKLPerEpoch.append(classKL.mean())
-		# plt.plot(classmeanKLPerEpoch)
-		# plt.ylabel('Mean KLD b/w Factors wrt Class')
-		# # plt.ylabel('some numbers')
-		# plt.savefig(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'))
-		# plt.clf()
-		plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
-
-
 		lod = generateReportF(vF,lF)
 		slod = generateReportF(SvF,SlF)
 		# pdb.set_trace()
@@ -1640,58 +1609,3 @@ for epoch in range(0,numEpochs):
 		FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-		# Top examples per latent dimension
-		#to be looked at later
-
-
-		# topExamplesLatentFactor = 'TopExamplesPerLatentFactor'
-
-		# try:
-		# 	os.makedirs(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,topExamplesLatentFactor))
-
-		# except:
-		# 	pass
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,topExamplesLatentFactor))
-		# # generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,topExamplesLatentFactor))
-		# pdb.set_trace()
-		# vF,iF,lF = analyzeF(F.T,MNISTval1.all_sampled_labels) 
-
-		# lod = generateReportF(vF,lF)
-		# # pdb.set_trace()
-		# FReport(lod,os.getcwd(),MNISTval1.numToClass) # Writing F Report
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging))
-
-
-
-		# Printing S and R
-
-		# inputSpaceTransform = 'SMatrices'
-
-		# try:
-		# 	os.makedirs(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,inputSpaceTransform))
-		# except:
-		# 	pass
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,inputSpaceTransform))
-
-		# spaceSimilarity(S,os.getcwd(),lod,MNISTval1.numToClass)
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging))
-
-
-		# neuralSpaceTransform = 'RMatrices'
-
-		# try:
-		# 	os.makedirs(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,neuralSpaceTransform))
-		# except:
-		# 	pass
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging,neuralSpaceTransform))
-
-		# spaceSimilarity(R,os.getcwd(),lod,MNISTval1.numToClass)
-
-		# os.chdir(os.path.join(outputFolderName,epochFolder,parentDirLatentImaging))

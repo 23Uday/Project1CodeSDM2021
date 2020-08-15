@@ -13,6 +13,7 @@ from scipy.optimize import nnls
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils import check_random_state
 from sklearn.utils.extmath import randomized_svd, safe_sparse_dot, squared_norm
+from sklearn.preprocessing import normalize
 import pdb
 from scipy import linalg
 import scipy.linalg.interpolative as sli
@@ -232,7 +233,7 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 	lmbdaSimplex = kwargs.pop('lmbdaSimplex', _DEF_LMBDA)
 	lmbdaF = kwargs.pop('lmbdaF', _DEF_LMBDA)
 	lmbdaTV = kwargs.pop('lmbdaTV', _DEF_LMBDA)
-	k = kwargs.pop('k',0)
+	lmbdaOrtho = kwargs.pop('lmbdaOrtho',0)
 	lmbdaPi = kwargs.pop('lmbdaPi', _DEF_LMBDA)
 	lmbdaOj = kwargs.pop('lmbdaOj', _DEF_LMBDA)
 	conv = kwargs.pop('conv', _DEF_CONV)
@@ -240,8 +241,8 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 
 
 	print(
-		'[Config] rank1: %d |numGroups: %d | maxIter: %d | conv: %7.1e | lmbdaF: %7.1e | lmbdaTV: %7.1e | k: %7.1e' %
-		(rank1, numGroups, maxIter, conv, lmbdaF, lmbdaTV, k))
+		'[Config] rank1: %d |numGroups: %d | maxIter: %d | conv: %7.1e | lmbdaF: %7.1e | lmbdaTV: %7.1e | lmbdaOrtho: %7.1e' %
+		(rank1, numGroups, maxIter, conv, lmbdaF, lmbdaTV, lmbdaOrtho))
 
 # ---------- initialize F ------------------------------------------------
 	# print('Initialization of F = NNDSVD')
@@ -286,7 +287,7 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 	# L = []
 	# T = []
 	# W = []
-	k = k
+	lmbdaOrtho = lmbdaOrtho
 	S = np.ones((rank1,rank1)) - np.eye(rank1)
 
 	for i in range(len(A)):
@@ -315,6 +316,7 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 	# **** Important Note change F to F.T for equiavalence with the old update steps
 	# pdb.set_trace()
 	for itr in range(maxIter):
+		# pdb.set_trace()
 		fitold = fit
 		tic = time.time()
 		#Check F shape
@@ -339,7 +341,8 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 			F = F/sumRF
 		else:
 			# print("Multiplicative Update of F")
-			F = _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp,lmbdaF,lmbdaTV)
+			# F = _updateF(D,A,F,P,O,lmbdaOrtho,S,spatialGrad,gradNorm,gradOp,lmbdaF,lmbdaTV)
+			F = _updateF(D,A,F,P,O,lmbdaF)
 			# pdb.set_trace()
 			# print("k = %f \t || S-FF'||**2 = %f"%(k,np.linalg.norm(S-F@F.T)**2))
 		for index in range(len(D)):
@@ -526,7 +529,55 @@ def laplacian(grad,div,k = 1):
 		M += div[i](mat)
 	return M
 
-def _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lmbdaTV = 0.1):
+# def _updateF(D,A,F,P,O,lmbdaOrtho,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lmbdaTV = 0.1):
+# 	# print('Updating F')
+# 	numChannels = len(D)
+# 	numLayers = len(A)
+# 	row,col = F.shape
+# 	ep = 1e-9
+# 	# Computing numerator part 1
+# 	num1 = np.zeros((row,col))
+# 	for i in range(numChannels): #Parallelize this
+# 		num1+=2*P[i].T@D[i]
+
+
+# 	num2 = np.zeros((row,col))
+# 	for j in range(numLayers): #Parallelize this
+# 		num2+=2*O[j].T@A[j]
+
+# 	num3 = lmbdaTV*laplace(F)/gradNorm(spatialGrad(F,gradOp)) # TotalVariation penalty
+# 	numerator = num1+num2+num3
+
+
+# 	## clipping as per paper
+# 	numerator[numerator<ep] = ep
+
+# 	#Computing Denominator
+
+# 	den1 = np.zeros((row,col))
+# 	for i in range(numChannels): #Parallelize this
+# 		den1+=2*P[i].T@P[i]@F
+
+
+# 	den2 = np.zeros((row,col))
+# 	for j in range(numLayers): #Parallelize this
+# 		den2+=2*O[j].T@O[j]@F
+
+# 	# den3 = 4*k*F@F.T@F
+# 	den3 = lmbdaOrtho*(S.T@F+S@F)
+# 	denom = den1+den2+den3+2*lmbdaF*np.ones(F.shape) #Adding reularization L1
+
+
+# 	#Computing updated F
+# 	mutliplicand = np.divide(numerator,denom.__iadd__(ep)) #adding epsilon for numerical stability
+
+# 	F=np.multiply(F,mutliplicand)
+# 	### to make norm of rows of F unit L1 ###
+# 	sumRF = np.ndarray.sum(F,axis= 1)[:,np.newaxis]
+# 	# pdb.set_trace()
+# 	return F/sumRF
+
+def _updateF(D,A,F,P,O, lmbdaF = 0.1):
 	# print('Updating F')
 	numChannels = len(D)
 	numLayers = len(A)
@@ -542,14 +593,11 @@ def _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lm
 	for j in range(numLayers): #Parallelize this
 		num2+=2*O[j].T@A[j]
 
-	num3 = lmbdaTV*laplace(F)/gradNorm(spatialGrad(F,gradOp)) # TotalVariation penalty
-	numerator = num1+num2+num3
+	numerator = num1+num2
 
 
 	## clipping as per paper
-	numerator[numerator<ep] = ep
 
-	#Computing Denominator
 
 	den1 = np.zeros((row,col))
 	for i in range(numChannels): #Parallelize this
@@ -561,8 +609,7 @@ def _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lm
 		den2+=2*O[j].T@O[j]@F
 
 	# den3 = 4*k*F@F.T@F
-	den3 = k*(S.T@F+S@F)
-	denom = den1+den2+den3+2*lmbdaF*np.ones(F.shape) #Adding reularization L1
+	denom = den1+den2+2*lmbdaF*np.ones(F.shape) + 2*lmbdaF*F #Adding reularization L1
 
 
 	#Computing updated F
@@ -570,10 +617,9 @@ def _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lm
 
 	F=np.multiply(F,mutliplicand)
 	### to make norm of rows of F unit L1 ###
-	sumRF = np.ndarray.sum(F,axis= 1)[:,np.newaxis]
+	# sumRF = np.ndarray.sum(F,axis= 1)[:,np.newaxis]
 	# pdb.set_trace()
-	return F/sumRF
-
+	return F
 
 
 
@@ -586,8 +632,11 @@ def _updatePEye(Di,F,Pi,index,lmbdaPi = 0.0001):
 	mutliplicand = np.divide(numerator,denominator.__iadd__(ep))
 	Pi = np.multiply(Pi,mutliplicand)
 	# Clipping and clamping pixel values
-	Pi[Pi > 1] = 1
-	Pi[Pi < 0] = 0
+	# if normalizeMode == 'clip':
+	# 	Pi[Pi > 1] = 1
+	# 	Pi[Pi < 0] = 0
+	# else:
+	# Pi = normalize(Pi,axis=0,norm='l2')
 	return Pi
 
 
@@ -599,6 +648,7 @@ def _updateOJ(Aj,F,Oj,index,lmbdaOj = 0.0001):
 	denominator = 2*Oj@F@F.T + 2*lmbdaOj*Oj
 	mutliplicand = np.divide(numerator,denominator.__iadd__(ep))
 	Oj = np.multiply(Oj,mutliplicand)
+	# Oj = normalize(Oj,axis=0,norm='l2')
 	return Oj
 
 
@@ -610,18 +660,15 @@ def _compute_RMSETOTAL(D,A,F,P,O):
 	for i,Di in enumerate(D):
 		PiF = dot(P[i],F)
 		fD+=squared_norm(Di -PiF)
-		numElementsD += Di.size
+		# numElementsD += Di.size
+		numElementsD += squared_norm(Di)
 
 	for i,Ai in enumerate(A):
 		OiF = dot(O[i],F)
 		fA+=squared_norm(Ai -OiF)
-		numElementsA += Ai.size
+		# numElementsA += Ai.size
+		numElementsA += squared_norm(Ai)
 
 	answer = (fD+fA)/(numElementsD+numElementsA)
 
-	return math.sqrt(answer),math.sqrt(fA)/numElementsA
-
-
-
-
-
+	return answer,fA/numElementsA
