@@ -577,7 +577,7 @@ def _updateF(D,A,F,P,O,k,S,spatialGrad,gradNorm,gradOp = gradOp, lmbdaF = 0.1,lm
 
 
 
-def _updatePEye(Di,F,Pi,index,lmbdaPi = 0):
+def _updatePEye(Di,F,Pi,index,lmbdaPi = 0.0001):
 	# print('Updating P[%s]'%str(index))
 	row,col = Pi.shape
 	ep = 1e-9
@@ -585,10 +585,13 @@ def _updatePEye(Di,F,Pi,index,lmbdaPi = 0):
 	denominator = 2*Pi@F@F.T + 2*lmbdaPi*Pi
 	mutliplicand = np.divide(numerator,denominator.__iadd__(ep))
 	Pi = np.multiply(Pi,mutliplicand)
+	# Clipping and clamping pixel values
+	Pi[Pi > 1] = 1
+	Pi[Pi < 0] = 0
 	return Pi
 
 
-def _updateOJ(Aj,F,Oj,index,lmbdaOj = 0):
+def _updateOJ(Aj,F,Oj,index,lmbdaOj = 0.0001):
 	# print('Updating O[%s]'%str(index))
 	row,col = Oj.shape
 	ep = 1e-9
