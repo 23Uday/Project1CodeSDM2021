@@ -633,10 +633,10 @@ def _updatePEye(Di,F,Pi,index,lmbdaPi = 0.0001):
 	Pi = np.multiply(Pi,mutliplicand)
 	# Clipping and clamping pixel values
 	# if normalizeMode == 'clip':
-	# 	Pi[Pi > 1] = 1
-	# 	Pi[Pi < 0] = 0
+	# Pi[Pi > 1] = 1
+	# Pi[Pi < 0] = 0
 	# else:
-	# Pi = normalize(Pi,axis=0,norm='l2')
+	Pi = normalize(Pi,axis=0,norm='l2')
 	return Pi
 
 

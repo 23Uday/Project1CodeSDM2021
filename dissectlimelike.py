@@ -928,7 +928,7 @@ def floatMatrixToGS(matrix,saveAs,magFactorY = 1,magFactorX = 1): # To Visualize
 	# max = matrix.max()
 	# matrix.__imul__(255/max)
 	img = PIL.Image.fromarray(matrix)
-	img = img.convert('RGB')
+	img = img.convert('L')
 	img = img.resize((magFactorY*matrix.shape[0],magFactorX*matrix.shape[1]))
 	img.save(saveAs)
 
@@ -959,7 +959,10 @@ def generateLatentImages(P,path):
 		for channel in range(l):
 			imgC = P[channel][:,imgNum].reshape(32,32)
 			# pdb.set_trace()
-			imgC.__imul__(255.999/imgC.max())
+			imgC.__imul__(255/imgC.max())
+			# imgC[imgC > 64] = 1
+			# imgC[imgC <= 64] = 0
+			# imgC.__imul__(255)
 			# pdb.set_trace()
 			image.append(np.uint8(imgC))
 		if l != 1:
@@ -1259,6 +1262,79 @@ def topImagesPerLatentFactor(vF,iF,indexToImagePath,saveTo):
 			fname = str(imageNum+1)+'_'+fname+'_'+'Weight : %s'%str(vF[imageNum,LFNUM])+'_'+'Per : %s'%str(100*vF[imageNum,LFNUM]/sumFactor)+'_'+'Top_Weight : %s'+str(weightCollected)
 			shutil.copy2(imagePath,os.path.join(saveTo,'LatentFactor-%d'%LFNUM,fname+'.png'))
 
+
+
+def topMaskedImagesPerLatentFactor(vF,iF,P,indexToImagePath,saveTo):
+	top = min(200,int(iF.shape[0]/10))
+	numChannels = len(P)
+	for LFNUM in range(iF.shape[1]):
+		if not os.path.exists(os.path.join(saveTo,'LatentFactor-%d'%LFNUM)):
+			os.makedirs(os.path.join(saveTo,'LatentFactor-%d'%LFNUM))
+		sumFactor = sum(vF[:,LFNUM])
+		weightCollected = sum(vF[:top,LFNUM])
+		for imageNum,imageIndex in enumerate(iF[:top,LFNUM]):
+			imagePath = indexToImagePath[imageIndex]
+			img = Image.open(imagePath).convert('RGB')
+			# imgArr = np.array(img)
+			imgc0 = np.array(img.getchannel(0))
+			imgc1 = np.array(img.getchannel(1))
+			imgc2 = np.array(img.getchannel(2))
+
+			fname = imagePath.split('/')[-3].strip()+'_'+imagePath.split('/')[-2].strip()+'_'+imagePath.split('/')[-1].strip().split('.')[0]
+			fname = str(imageNum+1)+'_'+fname+'_'+'Weight : %s'%str(vF[imageNum,LFNUM])+'_'+'Per : %s'%str(100*vF[imageNum,LFNUM]/sumFactor)+'_'+'Top_Weight : %s'+str(weightCollected)
+			
+			latentImage = []
+			maskedImage = []
+			for c in range(numChannels):
+				imgC = P[c][:,LFNUM].reshape(32,32)
+				imgC.__imul__(255/imgC.max())
+				latentImage.append(np.uint8(imgC))
+
+				# binaryImgC[]
+
+			if numChannels != 1:
+				latentImage = tuple(latentImage)
+				M = np.dstack(latentImage)
+				latentFactorImg = PIL.Image.fromarray(M)
+				latentFactorImg = latentFactorImg.convert('L')
+				latentFactorImgArr = np.array(latentFactorImg)
+				# latentFactorImgArrMean = latentFactorImgArr.mean()
+				# latentFactorImgArr[latentFactorImgArr > 10] = 1
+				latentFactorImgArr[latentFactorImgArr <= 10] = 0
+				imgc0[latentFactorImgArr == 0] = 0
+				imgc1[latentFactorImgArr == 0] = 0
+				imgc2[latentFactorImgArr == 0] = 0
+
+			elif numChannels == 1:
+				M = latentImage[l-1]
+				latentFactorImg = PIL.Image.fromarray(M)
+				latentFactorImg = latentFactorImg.convert('L')
+				latentFactorImgArr = np.array(latentFactorImg)
+				# latentFactorImgArrMean = latentFactorImgArr.mean()
+				# latentFactorImgArr[latentFactorImgArr > 10] = 1
+				latentFactorImgArr[latentFactorImgArr <= 10] = 0
+
+			# targetImage = np.multiply(imgArr,M)
+
+			targetImagec0 = imgc0
+			targetImagec1 = imgc1
+			targetImagec2 = imgc2
+
+			# pdb.set_trace()
+
+
+			# targetImagec0 = np.multiply(imgc0,latentFactorImgArr)
+			# targetImagec1 = np.multiply(imgc1,latentFactorImgArr)
+			# targetImagec2 = np.multiply(imgc2,latentFactorImgArr)
+
+
+			imgMasked = Image.fromarray(np.uint8(np.dstack((targetImagec0,targetImagec1,targetImagec2))))
+
+			imgMasked.save(os.path.join(saveTo,'LatentFactor-%d'%LFNUM,fname+'.png'))
+
+
+
+
 def numToClassText(numToClassDict,saveTo):
 	with open(saveTo,'w') as fH:
 		for i in range(len(numToClassDict)):
@@ -1346,7 +1422,7 @@ for epoch in range(0,numEpochs):
 		D1,A1 = tupleOfData
 		# pdb.set_trace()
 		D,A = genInputForTF(D1,A1)
-		pdb.set_trace()
+		# pdb.set_trace()
 		if actOnlyMode == 'True':
 			# D[0] = A[0] # Shift the first activation to D and keep the rest in A
 			# A = A[1:]
@@ -1580,11 +1656,13 @@ for epoch in range(0,numEpochs):
 		if classBased == 'True':
 			vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
 			SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-			topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor'))
+			topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
+			topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		else:
 			vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 			SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-			topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor'))
+			topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
+			topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		#F.T used because of the notational change
 		# somewhere downstream to properly populate lF
 			# NvF = normalize(vF,axis = 0)

@@ -47,7 +47,13 @@ def generateLatentImages(P,path):
 		floatMatrixToGS(M,os.path.join(path,'Latent Factor: '+str(imgNum)+'.jpg')) # removing magnification
 
 
+def img2np(img):
+	arr = np.array(img)
+	imgc0 = arr[:,:,0]
+	imgc1 = arr[:,:,1]
+	imgc2 = arr[:,:,2]
 
+	return np.dstack((imgc0,imgc1,imgc2))
 
 
 def topMaskedImagesPerLatentFactor(vF,iF,P,indexToImagePath,saveTo):
@@ -61,10 +67,14 @@ def topMaskedImagesPerLatentFactor(vF,iF,P,indexToImagePath,saveTo):
 		for imageNum,imageIndex in enumerate(iF[:top,LFNUM]):
 			imagePath = indexToImagePath[imageIndex]
 			img = Image.open(imagePath).convert('RGB')
+			imgArr = np.array(img)
 
+			fname = imagePath.split('/')[-3].strip()+'_'+imagePath.split('/')[-2].strip()+'_'+imagePath.split('/')[-1].strip().split('.')[0]
+			fname = str(imageNum+1)+'_'+fname+'_'+'Weight : %s'%str(vF[imageNum,LFNUM])+'_'+'Per : %s'%str(100*vF[imageNum,LFNUM]/sumFactor)+'_'+'Top_Weight : %s'+str(weightCollected)
+			
 			latentImage = []
 			for c in range(numChannels):
-				imgC = P[c][:,imageIndex].reshape(32,32)
+				imgC = P[c][:,LFNUM].reshape(32,32)
 				imgC.__imul__(255.999/imgC.max())
 				imgC[imgC > 64] = 1
 				imgC[imgC <= 64] = 0
@@ -75,6 +85,13 @@ def topMaskedImagesPerLatentFactor(vF,iF,P,indexToImagePath,saveTo):
 				M = np.dstack(latentImage)
 			elif numChannels == 1:
 				M = latentImage[l-1]
+
+			targetImage = np.multiply(imgArr,M)
+			imgMasked = Image.fromarray(np.uint8(targetImage))
+
+			imgMasked.save(os.path.join(saveTo,'LatentFactor-%d'%LFNUM,fname+'.png'))
+
+
 			# fname = imagePath.split('/')[-3].strip()+'_'+imagePath.split('/')[-2].strip()+'_'+imagePath.split('/')[-1].strip().split('.')[0]
 			# fname = str(imageNum+1)+'_'+fname+'_'+'Weight : %s'%str(vF[imageNum,LFNUM])+'_'+'Per : %s'%str(100*vF[imageNum,LFNUM]/sumFactor)+'_'+'Top_Weight : %s'+str(weightCollected)
 			# shutil.copy2(imagePath,os.path.join(saveTo,'LatentFactor-%d'%LFNUM,fname+'.png'))
