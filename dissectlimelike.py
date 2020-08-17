@@ -1346,6 +1346,7 @@ for epoch in range(0,numEpochs):
 		D1,A1 = tupleOfData
 		# pdb.set_trace()
 		D,A = genInputForTF(D1,A1)
+		pdb.set_trace()
 		if actOnlyMode == 'True':
 			# D[0] = A[0] # Shift the first activation to D and keep the rest in A
 			# A = A[1:]
