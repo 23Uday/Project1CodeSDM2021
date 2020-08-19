@@ -648,7 +648,7 @@ def _updateOJ(Aj,F,Oj,index,lmbdaOj = 0.0001):
 	denominator = 2*Oj@F@F.T + 2*lmbdaOj*Oj
 	mutliplicand = np.divide(numerator,denominator.__iadd__(ep))
 	Oj = np.multiply(Oj,mutliplicand)
-	# Oj = normalize(Oj,axis=0,norm='l2')
+	Oj = normalize(Oj,axis=0,norm='l2')
 	return Oj
 
 
