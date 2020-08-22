@@ -672,12 +672,12 @@ def createAdvSet(lot, numToClass, saveTo ):
 	
 	for label in d:
 		try:
-			os.makedirs(os.path.join(saveTo,'AdversarialCifar10Set',"Adv-"+label))
+			os.makedirs(os.path.join(saveTo,'AdversarialCifar100Set',"Adv-"+label))
 		except:
 			pass
 
 		for i,img in enumerate(d[label]):
-			img.save(os.path.join(saveTo,'AdversarialCifar10Set',"Adv-"+label,'%s-Image-%s.png'%(label,i)))
+			img.save(os.path.join(saveTo,'AdversarialCifar100Set',"Adv-"+label,'%s-Image-%s.png'%(label,i)))
 
 createAdvSet(in_examples[-1], CIFARtrain.numToClass, outputFolderName)
 # cnt = 0

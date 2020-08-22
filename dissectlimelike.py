@@ -1439,22 +1439,22 @@ for epoch in range(0,numEpochs):
 		
 		
 
-		# for i,mat in enumerate(A):
-		# 	print("***** Analysis of A[%d] *****\n"%i)
-		# 	F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, k=k, maxIter = maxIters, compute_fit = True)
-		# 	print("F shape : %s \t"%(F.shape,))
+		for i,mat in enumerate(A):
+			print("***** Analysis of A[%d] *****\n"%i)
+			F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
+			print("F shape : %s \t"%(F.shape,))
 
-		# 	try:
-		# 		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-		# 		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-		# 	except:
-		# 		pass
+			try:
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+			except:
+				pass
 
-		# 	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-		# 	generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
 
-		# 	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-		# 	generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
 		# 	# pdb.set_trace()
 		# 	MutualCoherence = mutualCoherence(F)
 		# 	for j,array in enumerate(mutualCoherenceSF[i]):
@@ -1468,17 +1468,17 @@ for epoch in range(0,numEpochs):
 		# 	# 	pdb.set_trace()
 		# 	# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
 		# 	# This needs to be changed when using class sampled
-		# 	if classBased == 'True':
-		# 		vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
-		# 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-		# 		topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-		# 	else:
-		# 		vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
-		# 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-		# 		topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-		# 	#F.T used because of the notational change
-		# 	# somewhere downstream to properly populate lF
-		# 		# NvF = normalize(vF,axis = 0)
+			if classBased == 'True':
+				vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
+				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
+				topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+			else:
+				vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
+				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
+				topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+			#F.T used because of the notational change
+			# somewhere downstream to properly populate lF
+				# NvF = normalize(vF,axis = 0)
 
 
 
@@ -1526,12 +1526,12 @@ for epoch in range(0,numEpochs):
 		# 	# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
 			
 		# 	# pdb.set_trace()
-		# 	lod = generateReportF(vF,lF)
-		# 	slod = generateReportF(SvF,SlF)
-		# 	# pdb.set_trace()
+			lod = generateReportF(vF,lF)
+			slod = generateReportF(SvF,SlF)
+			# pdb.set_trace()
 
-		# 	FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
-		# 	FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
+			FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
+			FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
 
 		
 
