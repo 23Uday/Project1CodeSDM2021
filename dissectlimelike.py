@@ -974,8 +974,12 @@ def generateLatentImages(P,path):
 		floatMatrixToGS(M,os.path.join(path,'Latent Factor: '+str(imgNum)+'.jpg')) # removing magnification
 
 
-def floatMatrixToHeatMapSNS(matrix,saveAs,dpi = 1200,cmap = 'hot', annot = False,linewidths = 0,fmt="f",annotFontSize = 10):#Pyplot
+def floatMatrixToHeatMapSNS(matrix,saveAs,title = "", xLabel= "", yLabel = "", dpi = 1200,cmap = 'hot', annot = False,linewidths = 0,fmt="f",annotFontSize = 10):#Pyplot
 	ax = sns.heatmap(matrix,cmap = cmap, annot = annot,annot_kws={"size": annotFontSize},linewidths = linewidths,fmt=fmt)
+	plt.title(title, fontsize = 20) 
+	plt.xlabel(xLabel, fontsize = 15) 
+	plt.ylabel(yLabel, fontsize = 15)
+
 	plt.savefig(saveAs,dpi = dpi)
 	plt.clf()
 
@@ -1005,7 +1009,7 @@ def mutualCoherence(mat,rowMode = True):
 	return (MMT.max(),MMT.mean(),MMT.min())
 
 
-def generateLatentActivations(O,path):
+def generateLatentActivations(O,path , title = "", xLabel= "", yLabel = "",):
 	numLayers = len(O)
 	numLatentImages,numDim = O[0].shape
 	fontSize = 10
@@ -1015,32 +1019,12 @@ def generateLatentActivations(O,path):
 	elif numDim>10:
 		fontSize *= 10/numDim
 	for layer in range(numLayers):
-		suffix1 = os.path.join(path,'LayerNum%d.jpg'%layer )
-		suffix2 = os.path.join(path,'LayerLatentDimSimilarity%d.jpg'%layer )
+		# suffix1 = os.path.join(path,'LayerNum%d.jpg'%layer )
+		# suffix2 = os.path.join(path,'LayerLatentDimSimilarity%d.jpg'%layer )
 		suffix3 = os.path.join(path,'LayerLatentCosineSimilarity%d.jpg'%layer )
-		# try:
-		# 	os.makedirs(suffixpt1)
-		# except:
-		# 	pass
-		# for numImages in range(numLatentImages):
-		# 	suffixpt1 = os.path.join(path,'LayerNum%d'%layer )
-		# 	try:
-		# 		os.makedirs(suffixpt1)
-		# 	except:
-		# 		pass
-		# 	suffixpt2 = 'LatentDim:%d.jpg'%numImages
-		# 	address = os.path.join(path,suffixpt1,suffixpt2)
-		# 	vecL = O[layer][:,numImages]
-		# 	mat = np.stack((vecL,vecL,vecL,vecL,vecL),axis = 1)
-		# 	mat.__imul__(255.999/mat.max())
-		# 	floatMatrixToGS(np.uint8(mat),address,25,4)
-		# rowMaxes = np.amax(O[layer],axis = 0)
-		# OlayerTilda = np.true_divide(O[layer],rowMaxes)
-		# OlayerTilda.__imul__(255.999)
-		# floatMatrixToGS(np.uint8(OlayerTilda),suffixpt1,2,10)
-		floatMatrixToHeatMapSNS(O[layer],suffix1)
-		floatMatrixToHeatMapSNS(O[layer].T@O[layer],suffix2)
-		floatMatrixToHeatMapSNS(cosineSimilarity(O[layer].T), suffix3,annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# floatMatrixToHeatMapSNS(O[layer],suffix1)
+		# floatMatrixToHeatMapSNS(O[layer].T@O[layer],suffix2)
+		floatMatrixToHeatMapSNS(cosineSimilarity(O[layer].T), suffix3, title + '-Layer:%s'%layer , xLabel, yLabel, annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 
 def flattenSortedMatrix(matrix,t=0):
 		''' Returns a list of tuples of the form [(row index,col index, value at the index),] '''
@@ -1590,7 +1574,6 @@ for epoch in range(0,numEpochs):
 				pass
 
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-
 			generateLatentImages(P,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
@@ -1598,17 +1581,13 @@ for epoch in range(0,numEpochs):
 		# Neural activations latent map
 
 			latentActivations = 'latentActivations'
-
 			try:
 				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 			except:
 				pass
 
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-
-
-			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-
+			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
 
@@ -1616,18 +1595,14 @@ for epoch in range(0,numEpochs):
 		elif actOnlyMode == "True":
 
 			latentActivations = 'latentActivations'
-
 			try:
 				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 			except:
 				pass
 
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-
-
 			generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 			# Because D[0] is A[0] of the original setup
-
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
 

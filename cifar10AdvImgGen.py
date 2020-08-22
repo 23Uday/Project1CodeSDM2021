@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as FU
@@ -14,8 +15,9 @@ import PIL
 from PIL import Image
 from collections import Counter
 import random
+import pdb
 
-epsilons = [0, .05, .1, .15, .2, .25, .3]
+epsilons = [0, 0.001, 0.01, .1]
 train_batch_size = 64
 test_batch_size = 1
 use_cuda=True
@@ -100,6 +102,14 @@ classListTestString = """[airplane,automobile,bird,cat,deer,dog,frog,horse,ship,
 # maple_tree, oak_tree, palm_tree, pine_tree, willow_tree, 
 # bicycle, bus, motorcycle, pickup_truck, train, 
 # lawn_mower, rocket, streetcar, tank, tractor]"""
+
+
+outputFolderName = outputFolderName+"lr:%s-wd:-%s"%(lr,wd)
+
+try:
+	os.makedirs(outputFolderName)
+except:
+	pass
 
 # https://github.com/weiaicunzai/pytorch-cifar100/blob/master/models/resnet.py
 """resnet in pytorch
@@ -263,14 +273,14 @@ transform_train = transforms.Compose([
 		transforms.RandomRotation(15),
 		transforms.ToTensor(),
 		# transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-		transforms.Normalize(tuple([float(x) for x in trainMean]),tuple([float(x) for x in TrainVar]))
+		# transforms.Normalize(tuple([float(x) for x in trainMean]),tuple([float(x) for x in TrainVar]))
 	])
 
 
 transform_test = transforms.Compose([
 		transforms.ToTensor(),
 		# transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-		transforms.Normalize(tuple([float(x) for x in testMean]),tuple([float(x) for x in testVar]))
+		# transforms.Normalize(tuple([float(x) for x in testMean]),tuple([float(x) for x in testVar]))
 	])
 
 CIFARtrain = dataset(root_dir = rootDir,sampleSize = samplingFactor, transform = transform_train)
@@ -280,6 +290,11 @@ CIFARval1 = dataset(root_dir = rootDirTest,sampleSize = samplingFactorTest, tran
 lenVal1 = len(CIFARval1)
 print("Probing Data: Loading sampling based loader\n")
 numClasses = len(CIFARtrain.classToNum)
+
+if CIFARtrain.classToNum == CIFARval1.classToNum:
+	print("Training and testing classes same")
+else:
+	print("Training and testing classes are NOT same")
 
 
 train_loader = torch.utils.data.DataLoader(dataset=CIFARtrain,
@@ -410,7 +425,7 @@ class ResNet(nn.Module):
 		output = output.view(output.size(0), -1)
 		output = self.fc(output)
 
-		return FU.log_softmax(output),(x1,x2,x3) 
+		return FU.log_softmax(output)
 
 	def countPosLayers(self):
 		return 3
@@ -434,7 +449,7 @@ def train(epoch):
 		# data, target = Variable(data), Variable(target)
 		data, target = Variable(data).cuda(), Variable(target).cuda() # GPU
 		optimizer.zero_grad()
-		output,act = model(data)
+		output = model(data)
 		# pdb.set_trace()
 		# output = model(data)
 		loss = FU.nll_loss(output, target)
@@ -459,7 +474,7 @@ def testval1(): # add X-val later
 	for data, target in val1_loader:
 		# data, target = Variable(data, volatile=True), Variable(target)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
-		output,act = model(data)
+		output = model(data)
 		# output = model(data)
 		# sum up batch loss
 		# pdb.set_trace()
@@ -491,12 +506,81 @@ def fgsm_attack(image, epsilon, data_grad):
 	return perturbed_image
 
 
+# def test( model, device, test_loader, epsilon ):
+
+# 	# Accuracy counter
+# 	correct = 0
+# 	initIncorrect = 0
+# 	adv_examples = []
+
+# 	# Loop over all examples in test set
+# 	for data, target in test_loader:
+
+# 		# Send the data and label to the device
+# 		data, target = data.to(device), target.to(device)
+
+# 		# Set requires_grad attribute of tensor. Important for Attack
+# 		data.requires_grad = True
+
+# 		# Forward pass the data through the model
+# 		output = model(data)
+# 		init_pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
+
+# 		# If the initial prediction is wrong, dont bother attacking, just move on
+# 		if init_pred.item() != target.item():
+# 			initIncorrect += 1
+# 			continue
+
+# 		# Calculate the loss
+# 		loss = FU.nll_loss(output, target)
+
+# 		# Zero all existing gradients
+# 		model.zero_grad()
+
+# 		# Calculate gradients of model in backward pass
+# 		loss.backward()
+
+# 		# Collect datagrad
+# 		data_grad = data.grad.data
+
+# 		# Call FGSM Attack
+# 		perturbed_data = fgsm_attack(data, epsilon, data_grad)
+
+# 		# Re-classify the perturbed image
+# 		output = model(perturbed_data)
+
+# 		# Check for success
+# 		final_pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
+# 		if final_pred.item() == target.item():
+# 			correct += 1
+# 			# Special case for saving 0 epsilon examples
+# 			if (epsilon == 0) and (len(adv_examples) < 5):
+# 				adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
+# 				adv_examples.append( (init_pred.item(), final_pred.item(), adv_ex) )
+# 		else:
+# 			# Save some adv examples for visualization later
+# 			if len(adv_examples) < 5:
+# 				adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
+# 				adv_examples.append( (init_pred.item(), final_pred.item(), adv_ex) )
+
+# 	# Calculate final accuracy for this epsilon
+# 	final_acc = correct/float(len(test_loader))
+# 	print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(test_loader), final_acc))
+
+# 	# Return the accuracy and an adversarial example
+# 	return final_acc, adv_examples
+
+
 
 def test( model, device, test_loader, epsilon ):
 
 	# Accuracy counter
 	correct = 0
+	incorrect = 0
 	adv_examples = []
+	adv_examples_incorr = []
+	#model.train()
+	inaccurate = 0
 
 	# Loop over all examples in test set
 	for data, target in test_loader:
@@ -508,11 +592,12 @@ def test( model, device, test_loader, epsilon ):
 		data.requires_grad = True
 
 		# Forward pass the data through the model
-		output,act = model(data)
-		init_pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
+		output = model(data)
+		init_pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
 
 		# If the initial prediction is wrong, dont bother attacking, just move on
 		if init_pred.item() != target.item():
+			inaccurate += 1
 			continue
 
 		# Calculate the loss
@@ -537,46 +622,77 @@ def test( model, device, test_loader, epsilon ):
 		final_pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability
 		if final_pred.item() == target.item():
 			correct += 1
-			# Special case for saving 0 epsilon examples
-			if (epsilon == 0) and (len(adv_examples) < 5):
-				adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-				adv_examples.append( (init_pred.item(), final_pred.item(), adv_ex) )
-		else:
+			# # Special case for saving 0 epsilon examples
+			# if (epsilon == 0) and (len(adv_examples) < 5):
+			# 	adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
+			# 	adv_ex = np.transpose(adv_ex, (1,2,0))
+			# 	adv_examples.append( (init_pred.item(), final_pred.item(), adv_ex) )
+		elif final_pred.item() != target.item():
 			# Save some adv examples for visualization later
-			if len(adv_examples) < 5:
-				adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
-				adv_examples.append( (init_pred.item(), final_pred.item(), adv_ex) )
+			# if len(adv_examples) < 5:
+			# pdb.set_trace()
+			incorrect += 1
+			adv_ex = perturbed_data.squeeze().detach().cpu().numpy()
+			adv_ex = np.transpose(adv_ex, (1,2,0))
+			adv_examples_incorr.append( (init_pred.item(), final_pred.item(), adv_ex) )
 
+	# pdb.set_trace()
 	# Calculate final accuracy for this epsilon
 	final_acc = correct/float(len(test_loader))
-	print("Epsilon: {}\tTest Accuracy = {} / {} = {}".format(epsilon, correct, len(test_loader), final_acc))
+	print("Epsilon: {}\tTest Accuracy = {} / {} = {}\tError Rate = {} / {}\tInaccurate Predictions = {} / {}".format(epsilon, correct, len(test_loader), final_acc,incorrect, len(test_loader), inaccurate, len(test_loader)))
 
 	# Return the accuracy and an adversarial example
-	return final_acc, adv_examples
+	return final_acc, adv_examples, adv_examples_incorr
 
 
 accuracies = []
 examples = []
+in_examples = []
 
 # Run test for each epsilon
 for eps in epsilons:
-	acc, ex = test(model, device, val1_loader, eps)
+	acc, ex, in_ex = test(model, device, val1_loader, eps)
 	accuracies.append(acc)
 	examples.append(ex)
+	in_examples.append(in_ex)
+# pdb.set_trace()
 
 
-cnt = 0
-plt.figure(figsize=(8,10))
-for i in range(len(epsilons)):
-	for j in range(len(examples[i])):
-		cnt += 1
-		plt.subplot(len(epsilons),len(examples[0]),cnt)
-		plt.xticks([], [])
-		plt.yticks([], [])
-		if j == 0:
-			plt.ylabel("Eps: {}".format(epsilons[i]), fontsize=14)
-		orig,adv,ex = examples[i][j]
-		plt.title("{} -> {}".format(orig, adv))
-		plt.imshow(ex)
-plt.tight_layout()
-plt.show()
+def arrToImg(arr):
+	Img = Image.fromarray(np.uint8(arr*255)).convert('RGB')
+	return Img
+
+def createAdvSet(lot, numToClass, saveTo ):
+	d = dict()
+	for t in lot:
+		if numToClass[t[0]] not in d:
+			d.update({numToClass[t[0]] : [arrToImg(t[2])]})
+		else:
+			d[numToClass[t[0]]].append(arrToImg(t[2]))
+	
+	for label in d:
+		try:
+			os.makedirs(os.path.join(saveTo,'AdversarialCifar10Set',"Adv-"+label))
+		except:
+			pass
+
+		for i,img in enumerate(d[label]):
+			img.save(os.path.join(saveTo,'AdversarialCifar10Set',"Adv-"+label,'Image-%s.png'%i))
+
+createAdvSet(in_examples[-1], CIFARtrain.numToClass, outputFolderName)
+# cnt = 0
+# plt.figure(figsize=(8,10))
+# for i in range(len(epsilons)):
+# 	for j in range(len(in_examples[i])):
+# 		cnt += 1
+# 		plt.subplot(len(epsilons),len(in_examples[0]),cnt)
+# 		plt.xticks([], [])
+# 		plt.yticks([], [])
+# 		if j == 0:
+# 			plt.ylabel("Eps: {}".format(epsilons[i]), fontsize=14)
+# 		orig,adv,ex = in_examples[i][j]
+# 		plt.title("{} -> {}".format(orig, adv))
+# 		# npex = ex.numpy()
+# 		plt.imshow(ex, interpolation='nearest')
+# plt.tight_layout()
+# plt.savefig(os.path.join(outputFolderName,'testImage.png'))
