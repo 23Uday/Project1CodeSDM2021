@@ -265,8 +265,8 @@ def get_mean_and_std(dataset):
 
 ### Subtract Mean for only sampled classes Later on
 
-trainMean,TrainVar = get_mean_and_std(dataset(root_dir = rootDir))
-testMean, testVar = get_mean_and_std(dataset(root_dir = rootDirTest))
+# trainMean,TrainVar = get_mean_and_std(dataset(root_dir = rootDir))
+# testMean, testVar = get_mean_and_std(dataset(root_dir = rootDirTest))
 transform_train = transforms.Compose([
 		transforms.RandomCrop(32, padding=4),
 		transforms.RandomHorizontalFlip(),
@@ -662,7 +662,7 @@ def arrToImg(arr):
 	Img = Image.fromarray(np.uint8(arr*255)).convert('RGB')
 	return Img
 
-def createAdvSet(lot, numToClass, saveTo ):
+def createAdvSet(lot, numToClass,classToNum, c2sc,scs, saveTo ):
 	d = dict()
 	for t in lot:
 		if numToClass[t[0]] not in d:
@@ -672,14 +672,14 @@ def createAdvSet(lot, numToClass, saveTo ):
 	
 	for label in d:
 		try:
-			os.makedirs(os.path.join(saveTo,'AdversarialCifar100Set',"Adv-"+label))
+			os.makedirs(os.path.join(saveTo,'AdversarialCifar100Set', "AdvSC-"+scs[c2sc[classToNum[label]]],"Adv-"+label))
 		except:
 			pass
 
 		for i,img in enumerate(d[label]):
-			img.save(os.path.join(saveTo,'AdversarialCifar100Set',"Adv-"+label,'%s-Image-%s.png'%(label,i)))
+			img.save(os.path.join(saveTo,'AdversarialCifar100Set',"AdvSC-"+scs[c2sc[classToNum[label]]],"Adv-"+label,'%s-Image-%s.png'%(label,i)))
 
-createAdvSet(in_examples[-1], CIFARtrain.numToClass, outputFolderName)
+createAdvSet(in_examples[-1], CIFARtrain.numToClass, CIFARtrain.classToNum, CIFARtrain.classToSuperClassMap, CIFARtrain.superClassSetReverse, outputFolderName)
 # cnt = 0
 # plt.figure(figsize=(8,10))
 # for i in range(len(epsilons)):

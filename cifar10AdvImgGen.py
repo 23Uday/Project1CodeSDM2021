@@ -265,8 +265,8 @@ def get_mean_and_std(dataset):
 
 ### Subtract Mean for only sampled classes Later on
 
-trainMean,TrainVar = get_mean_and_std(dataset(root_dir = rootDir))
-testMean, testVar = get_mean_and_std(dataset(root_dir = rootDirTest))
+# trainMean,TrainVar = get_mean_and_std(dataset(root_dir = rootDir))
+# testMean, testVar = get_mean_and_std(dataset(root_dir = rootDirTest))
 transform_train = transforms.Compose([
 		transforms.RandomCrop(32, padding=4),
 		transforms.RandomHorizontalFlip(),

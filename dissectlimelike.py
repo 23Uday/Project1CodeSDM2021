@@ -1024,7 +1024,7 @@ def generateLatentActivations(O,path , title = "", xLabel= "", yLabel = "",):
 		suffix3 = os.path.join(path,'LayerLatentCosineSimilarity%d.jpg'%layer )
 		# floatMatrixToHeatMapSNS(O[layer],suffix1)
 		# floatMatrixToHeatMapSNS(O[layer].T@O[layer],suffix2)
-		floatMatrixToHeatMapSNS(cosineSimilarity(O[layer].T), suffix3, title + '-Layer:%s'%layer , xLabel, yLabel, annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		floatMatrixToHeatMapSNS(cosineSimilarity(O[layer].T), suffix3, title , xLabel, yLabel, annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
 
 def flattenSortedMatrix(matrix,t=0):
 		''' Returns a list of tuples of the form [(row index,col index, value at the index),] '''
@@ -1454,7 +1454,7 @@ for epoch in range(0,numEpochs):
 			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
 
 			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
+			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity','Latent Factor','Latent Factor')
 		# 	# pdb.set_trace()
 		# 	MutualCoherence = mutualCoherence(F)
 		# 	for j,array in enumerate(mutualCoherenceSF[i]):
