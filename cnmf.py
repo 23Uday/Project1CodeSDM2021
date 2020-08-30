@@ -292,9 +292,9 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 
 	for i in range(len(A)):
 		# print('Initialization of O[%s] = NNDSVD'%i)
-		# O.append(_initialize_nmf(A[i],rank1)[0])
+		O.append(_initialize_nmf(A[i],rank1)[0])
 		# O.append(IDLeft(A[i],rank1,A[i].shape[0]))
-		O.append(np.random.rand(A[i].shape[0],rank1))
+		# O.append(np.random.rand(A[i].shape[0],rank1))
 		check_non_negative(O[i],'update O[%d]'%i)
 		
 		# L.append(np.random.rand(rank1,midRank))
@@ -340,7 +340,7 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 			sumRF = np.ndarray.sum(F,axis= 1)[:,np.newaxis]
 			F = F/sumRF
 		else:
-			# print("Multiplicative Update of F")
+			print("Multiplicative Update of F")
 			# F = _updateF(D,A,F,P,O,lmbdaOrtho,S,spatialGrad,gradNorm,gradOp,lmbdaF,lmbdaTV)
 			F = _updateF(D,A,F,P,O,lmbdaF)
 			# pdb.set_trace()

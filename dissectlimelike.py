@@ -55,6 +55,7 @@ warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser() # argparser object
 parser.add_argument("rootDir", help = "Enter the name of root folder which containts the data subfolders :",type = str)
 parser.add_argument("rootDirTest", help = "Enter the name of root folder which containts the test data subfolders :",type = str)
+# parser.add_argument("networkFile", help = "Enter the name of root folder which containts the Network :",type = str)
 parser.add_argument("outputFolderName", help = "Enter the name(Path) of the Output Folder :", type = str)
 parser.add_argument("NetworkName", help = "Enter the name(Path) of the network file :", type = str)
 parser.add_argument("Rank1", help = "Enter Rank 1 :", type = int)
@@ -1325,6 +1326,41 @@ def numToClassText(numToClassDict,saveTo):
 			fH.write(numToClassDict[i]+'\n')
 
 
+
+def dictToLineAdv(d,numToClass):
+	# revSortedD = sorted(d.items(), key=lambda kv: kv[1], reverse=True)
+	purityDict = cleanVsAdvWeight(d,numToClass)
+	line = ''
+	entropy = 0
+	for classExample,weight in purityDict.items():
+		# pdb.set_trace()
+		line  += 'Class : %s - Weight : %f\t'%(classExample,weight)
+
+
+	return line.strip()+'\n'
+
+def cleanVsAdvWeight(d,numToClass):
+	pureTaintedDict = {'pure': 0, 'adversarial': 0}
+	for classExample,weight in d.items():
+		if 'Adv' in numToClass.get(classExample):
+			pureTaintedDict['adversarial'] += weight
+		else:
+			pureTaintedDict['pure'] += weight
+
+	return pureTaintedDict
+
+
+
+
+def FAdvReport(LoD,saveTo,numToClass,fname = 'AdvReport.txt'):
+	with open(os.path.join(saveTo,fname),'w') as fH:
+		for i,d in enumerate(LoD):
+			pre = 'Latent Factor : %d\t'%i
+			line = dictToLineAdv(d,numToClass)
+			fH.write(pre+line)
+
+
+
 netLossTraining = []
 netLossVal1 = []
 netAccVal1 = []
@@ -1532,6 +1568,8 @@ for epoch in range(0,numEpochs):
 
 			FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
 			FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
+			FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
+			FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
 
 		
 
@@ -1661,5 +1699,7 @@ for epoch in range(0,numEpochs):
 
 		FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
 		FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
+		FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
+		FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))

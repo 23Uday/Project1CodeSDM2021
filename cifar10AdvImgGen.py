@@ -679,7 +679,14 @@ def createAdvSet(lot, numToClass, saveTo ):
 		for i,img in enumerate(d[label]):
 			img.save(os.path.join(saveTo,'AdversarialCifar10Set',"Adv-"+label,'%s-Image-%s.png'%(label,i)))
 
-createAdvSet(in_examples[-1], CIFARtrain.numToClass, outputFolderName)
+# createAdvSet(in_examples[-1], CIFARtrain.numToClass, outputFolderName)
+
+for i,in_example in enumerate(in_examples):
+	if i == 0:
+		continue
+	else:
+		createAdvSet(in_example, CIFARtrain.numToClass, os.path.join(outputFolderName,'EPS:%s'%epsilons[i]))
+
 # cnt = 0
 # plt.figure(figsize=(8,10))
 # for i in range(len(epsilons)):

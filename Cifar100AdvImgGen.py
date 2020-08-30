@@ -17,7 +17,7 @@ from collections import Counter
 import random
 import pdb
 
-epsilons = [0, 0.001, 0.01, .1]
+epsilons = [0, 0.001, 0.005, 0.01]
 train_batch_size = 64
 test_batch_size = 1
 use_cuda=True
@@ -679,7 +679,13 @@ def createAdvSet(lot, numToClass,classToNum, c2sc,scs, saveTo ):
 		for i,img in enumerate(d[label]):
 			img.save(os.path.join(saveTo,'AdversarialCifar100Set',"AdvSC-"+scs[c2sc[classToNum[label]]],"Adv-"+label,'%s-Image-%s.png'%(label,i)))
 
-createAdvSet(in_examples[-1], CIFARtrain.numToClass, CIFARtrain.classToNum, CIFARtrain.classToSuperClassMap, CIFARtrain.superClassSetReverse, outputFolderName)
+# createAdvSet(in_examples[-1], CIFARtrain.numToClass, CIFARtrain.classToNum, CIFARtrain.classToSuperClassMap, CIFARtrain.superClassSetReverse, outputFolderName)
+for i,in_example in enumerate(in_examples):
+	if i == 0:
+		continue
+	else:
+		createAdvSet(in_example, CIFARtrain.numToClass, CIFARtrain.classToNum, CIFARtrain.classToSuperClassMap, CIFARtrain.superClassSetReverse, os.path.join(outputFolderName,'EPS:%s'%epsilons[i]))
+
 # cnt = 0
 # plt.figure(figsize=(8,10))
 # for i in range(len(epsilons)):
