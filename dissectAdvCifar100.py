@@ -55,8 +55,7 @@ warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser() # argparser object
 parser.add_argument("rootDir", help = "Enter the name of root folder which containts the data subfolders :",type = str)
 parser.add_argument("rootDirTest", help = "Enter the name of root folder which containts the test data subfolders :",type = str)
-parser.add_argument("rootDirAdv", help = "Enter the name of root folder which containts the original adv data subfolders :",type = str)
-parser.add_argument("networkFile", help = "Enter the name of root folder which containts the Network :",type = str)
+# parser.add_argument("networkFile", help = "Enter the name of root folder which containts the Network :",type = str)
 parser.add_argument("outputFolderName", help = "Enter the name(Path) of the Output Folder :", type = str)
 parser.add_argument("NetworkName", help = "Enter the name(Path) of the network file :", type = str)
 parser.add_argument("Rank1", help = "Enter Rank 1 :", type = int)
@@ -88,13 +87,6 @@ args = parser.parse_args()
 
 rootDir = args.rootDir
 rootDirTest = args.rootDirTest
-rootDirAdv = args.rootDirAdv
-if rootDirAdv != "None":
-	advAccuracy = True
-else:
-	advAccuracy = False
-
-networkFile = args.networkFile
 
 outputFolderName = args.outputFolderName
 if outputFolderName == 'pwd':
@@ -341,134 +333,6 @@ class Dataset(Dataset):
 		return 3
 
 
-class DatasetDictionaryPre(Dataset):
-	""" CIFAR 10 dataset """
-	def __init__(self,root_dir,classToNum = {}, classToSuperClassMap = {}, superClassSet = {}, all_image_paths = [], all_labels = [],transform =None, sampleSize = 1.0):
-		"""
-		root_dir : The testing/training data set which contains subfolders.
-		sampleSize needs to be between 0 and 1
-		"""
-
-		#Raw Data
-		self.root_dir = root_dir
-		self.transform = transform
-		# self.classToNum = {}
-		self.classToNum = classToNum
-		# self.superClassToClassNum = {}
-		# self.classToSuperClassMap = {}
-		self.classToSuperClassMap = classToSuperClassMap
-		# self.superClassSet = {}
-		self.superClassSet = superClassSet
-		self.all_labels = []
-		self.all_Superlabels = []
-		self.all_image_paths = glob.glob(root_dir+"/**/*.png", recursive=True)
-		self.all_Classlabels = [fadd.split('/')[-2] for fadd in self.all_image_paths ]
-		self.all_SuperClasslabels = [fadd.split('/')[-3] for fadd in self.all_image_paths ]
-		# pdb.set_trace()
-		for fadd in self.all_image_paths:
-			if fadd.split('/')[-2] not in self.classToNum:
-				self.classToNum.update({fadd.split('/')[-2]: len(self.classToNum)})
-				# self.superClassToClassNum.update({fadd.split('/')[-3]: len(self.classToNum)})
-				if fadd.split('/')[-3] not in self.superClassSet:
-					self.superClassSet.update({fadd.split('/')[-3]:len(self.superClassSet)})
-
-				### mapping the class to super class
-				self.classToSuperClassMap.update({self.classToNum[fadd.split('/')[-2]]:self.superClassSet[fadd.split('/')[-3]] })
-
-
-				self.all_labels.append(self.classToNum[fadd.split('/')[-2]])
-				self.all_Superlabels.append(self.superClassSet[fadd.split('/')[-3]])
-			else:
-				self.all_labels.append(self.classToNum[fadd.split('/')[-2]])
-
-
-				if fadd.split('/')[-3] not in self.superClassSet:
-					self.superClassSet.update({fadd.split('/')[-3]:len(self.superClassSet)})
-
-
-				self.all_Superlabels.append(self.superClassSet[fadd.split('/')[-3]])
-
-
-		self.numToClass = {v: k for k, v in self.classToNum.items()}
-		self.superClassSetReverse = {v: k for k, v in self.superClassSet.items()}
-		self.classes = set(self.all_labels)
-
-		# preprocessing
-		self.counter = Counter(self.all_labels)
-		self.sampleSize = sampleSize
-
-
-		self.LabelToIndex = self.generateLabelsToIndex()
-		self.sampledLabelToIndex = self.generateSampledLabelsToIndex()
-
-
-		# Sampled Data
-		self.all_sampled_idx = self.generateSampledIdx() 
-		self.all_sampled_labels = [self.all_labels[i] for i in self.all_sampled_idx] # to be used for all labels
-		self.all_sampled_super_labels = [self.all_Superlabels[i] for i in self.all_sampled_idx] # to be used for all labels
-		self.sampled_counter = Counter(self.all_sampled_labels)
-		self.all_sampled_image_paths = [self.all_image_paths[i] for i in self.all_sampled_idx]
-
-
-
-
-
-
-	def __len__(self):
-		""" returns the total number of files"""
-		return len(self.all_sampled_image_paths)
-
-
-	def __getitem__(self,idx):
-		""" return image for the given index"""
-		imgAdd = self.all_sampled_image_paths[idx]
-		img = Image.open(imgAdd).convert('RGB')
-		if self.transform == None:
-			img = transforms.ToTensor()(img)
-		else:
-			img = self.transform(img)
-		# pdb.set_trace(0)
-		return (img,self.all_sampled_labels[idx])
-
-
-	# Helper Functions	
-
-	def getLabels(self):
-		return self.all_labels
-
-	def generateLabelsToIndex(self):
-		LabelToIndex = {}
-		for idx,label in enumerate(self.all_labels):
-			if label not in LabelToIndex:
-				LabelToIndex.update({label:[idx]})
-			else:
-				LabelToIndex[label].append(idx)
-		return LabelToIndex
-
-
-	def getLabelsToIndex(self):
-		return self.LabelToIndex
-
-	def generateSampledLabelsToIndex(self):
-		sampledLabelToIndex = {}
-		for label, idx_list in self.LabelToIndex.items():
-			indices = random.sample(range(len(idx_list)), int(len(idx_list)*self.sampleSize))
-			sampledLabelToIndex.update({label: [idx_list[i] for i in sorted(indices)]})
-
-		return sampledLabelToIndex
-
-
-	def generateSampledIdx(self):
-		all_sampled_idx = []
-		for label,idx_list in self.sampledLabelToIndex.items():
-			all_sampled_idx += idx_list
-		return all_sampled_idx
-
-	def getInputChannels(self):
-		return 3
-
-
-
 class DatasetClassBased(Dataset):
 	""" Handwritten digits dataset """
 	def __init__(self,root_dir,all_image_paths = [], all_labels = [],transform =None, classToNum = {},superclassToNum = {}, sampleSize = 1.0,classList = {'0','1','2','3','4','5','6','7','8','9'}):
@@ -653,17 +517,11 @@ transform_test = transforms.Compose([
 if classBased == 'False':
 	CIFARtrain = Dataset(root_dir = rootDir,sampleSize = samplingFactor, transform = transform_train)
 	lenTrain = len(CIFARtrain)
-	print("Training Data: Loading sampling based loader")
+	print("Training Data: Loading sampling based loader\n")
 	CIFARval1 = Dataset(root_dir = rootDirTest,sampleSize = samplingFactorTest, transform = transform_test)
 	lenVal1 = len(CIFARval1)
-	print("Probing Data: Loading sampling based loader")
+	print("Probing Data: Loading sampling based loader\n")
 	numClasses = len(CIFARtrain.classToNum)
-
-	if advAccuracy:
-		class2NumInput = {'Adv-'+k:v for k,v in dict(CIFARtrain.classToNum).items()}
-		SCSInput = {'AdvSC-'+k:v for k,v in dict(CIFARtrain.superClassSet).items()}
-		CIFARAdv1 = DatasetDictionaryPre(root_dir = rootDirAdv,classToNum = class2NumInput, classToSuperClassMap = dict(CIFARtrain.classToSuperClassMap), superClassSet = SCSInput, sampleSize = 1, transform = transform_test)
-		lenAdv1 = len(CIFARAdv1)
 	# pdb.set_trace()
 elif classBased == 'True':
 	CIFARtrain = DatasetClassBased(root_dir = rootDir, sampleSize = samplingFactor, transform = transform_train, classList = classListTrain)
@@ -702,10 +560,6 @@ train_loader = torch.utils.data.DataLoader(dataset=CIFARtrain,
 										   shuffle=True)
 
 val1_loader = torch.utils.data.DataLoader(dataset=CIFARval1,
-										  batch_size=test_batch_size,
-										  shuffle=False)
-
-adv1_loader = torch.utils.data.DataLoader(dataset=CIFARAdv1,
 										  batch_size=test_batch_size,
 										  shuffle=False)
 
@@ -909,15 +763,10 @@ class ResNet(nn.Module):
 
 # model = LeNet5MNIST(numClasses)
 
-if networkFile == 'None':
-	model = ResNet(BasicBlock, [2, 2, 2, 2], numClasses)
-	model = model.cuda()
-	print("*** Initialized Network ***")
-	# model = AlexNet()
-else:
-	model = torch.load(networkFile)
-	model = model.cuda()
-	print("*** Loaded Network ***")
+
+model = ResNet(BasicBlock, [2, 2, 2, 2], numClasses)
+model = model.cuda()
+# model = AlexNet()
 
 optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9,weight_decay = 5e-4)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90], gamma=0.2)
@@ -970,38 +819,6 @@ def testval1(): # add X-val later
 		100. * correct / len(val1_loader.dataset)))
 	return val1_loss,100. * correct / len(val1_loader.dataset)
 
-
-def testAdv1(): # add X-val later
-	model.eval()
-	val1_loss = 0
-	correct = 0
-	numClasses = len(CIFARtrain.numToClass)
-	numSuperClasses = len(CIFARtrain.superClassSetReverse)
-	c2cMat = np.zeros((numClasses,numClasses))
-	c2scMat = np.zeros((numClasses,numSuperClasses))
-	sc2scMat = np.zeros((numSuperClasses,numSuperClasses))
-	for data, target in adv1_loader:
-		# data, target = Variable(data, volatile=True), Variable(target)
-		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
-		output,act = model(data)
-		# output = model(data)
-		# sum up batch loss
-		# pdb.set_trace()
-		val1_loss += FU.nll_loss(output, target).item()
-		# get the index of the max log-probability
-		pred = output.data.max(1, keepdim=True)[1]
-		c2cMat[int(target.data.cpu().numpy()),int(pred.data.cpu().numpy())] += 1
-		c2scMat[int(target.data.cpu().numpy()),CIFARtrain.classToSuperClassMap[int(pred.data.cpu().numpy())]] += 1
-		sc2scMat[CIFARtrain.classToSuperClassMap[int(target.data.cpu().numpy())],CIFARtrain.classToSuperClassMap[int(pred.data.cpu().numpy())]] += 1
-
-		# pdb.set_trace()
-		correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-
-	val1_loss /= len(adv1_loader.dataset)
-	print('\nAdv set 1: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-		val1_loss, correct, len(adv1_loader.dataset),
-		100. * correct / len(adv1_loader.dataset)))
-	return val1_loss,100. * correct / len(adv1_loader.dataset),c2cMat,c2scMat,sc2scMat
 
 
 def probeVal1():
@@ -1104,151 +921,6 @@ def norm(x):
 # 				d[int(lF[i,j])] = vF[i,j]**2/sqNormj
 # 		LoD.append(d)
 # 	return LoD
-
-def heatmap(data, row_labels, col_labels, ax=None,
-			cbar_kw={}, cbarlabel="", **kwargs):
-	"""
-	Create a heatmap from a numpy array and two lists of labels.
-
-	Parameters
-	----------
-	data
-		A 2D numpy array of shape (N, M).
-	row_labels
-		A list or array of length N with the labels for the rows.
-	col_labels
-		A list or array of length M with the labels for the columns.
-	ax
-		A `matplotlib.axes.Axes` instance to which the heatmap is plotted.  If
-		not provided, use current axes or create a new one.  Optional.
-	cbar_kw
-		A dictionary with arguments to `matplotlib.Figure.colorbar`.  Optional.
-	cbarlabel
-		The label for the colorbar.  Optional.
-	**kwargs
-		All other arguments are forwarded to `imshow`.
-	"""
-
-	if not ax:
-		ax = plt.gca()
-
-	# Plot the heatmap
-	im = ax.imshow(data, **kwargs)
-
-	# Create colorbar
-	cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-	cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
-
-	# We want to show all ticks...
-	ax.set_xticks(np.arange(data.shape[1]))
-	ax.set_yticks(np.arange(data.shape[0]))
-	# ... and label them with the respective list entries.
-	ax.set_xticklabels(col_labels)
-	ax.set_yticklabels(row_labels)
-
-	# Let the horizontal axes labeling appear on top.
-	ax.tick_params(top=True, bottom=False,
-				   labeltop=True, labelbottom=False)
-
-	# Rotate the tick labels and set their alignment.
-	plt.setp(ax.get_xticklabels(), rotation=-90, ha="right",
-			 rotation_mode="anchor")
-
-	# Turn spines off and create white grid.
-	for edge, spine in ax.spines.items():
-		spine.set_visible(False)
-
-	ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-	ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
-	ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
-	ax.tick_params(which="minor", bottom=False, left=False)
-
-	return im, cbar
-
-
-def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
-					 textcolors=["black", "white"],
-					 threshold=None, **textkw):
-	"""
-	A function to annotate a heatmap.
-
-	Parameters
-	----------
-	im
-		The AxesImage to be labeled.
-	data
-		Data used to annotate.  If None, the image's data is used.  Optional.
-	valfmt
-		The format of the annotations inside the heatmap.  This should either
-		use the string format method, e.g. "$ {x:.2f}", or be a
-		`matplotlib.ticker.Formatter`.  Optional.
-	textcolors
-		A list or array of two color specifications.  The first is used for
-		values below a threshold, the second for those above.  Optional.
-	threshold
-		Value in data units according to which the colors from textcolors are
-		applied.  If None (the default) uses the middle of the colormap as
-		separation.  Optional.
-	**kwargs
-		All other arguments are forwarded to each call to `text` used to create
-		the text labels.
-	"""
-
-	if not isinstance(data, (list, np.ndarray)):
-		data = im.get_array()
-
-	# Normalize the threshold to the images color range.
-	if threshold is not None:
-		threshold = im.norm(threshold)
-	else:
-		threshold = im.norm(data.max())/2.
-
-	# Set default alignment to center, but allow it to be
-	# overwritten by textkw.
-	kw = dict(horizontalalignment="center",
-			  verticalalignment="center")
-	kw.update(textkw)
-
-	# Get the formatter in case a string is supplied
-	if isinstance(valfmt, str):
-		valfmt = matplotlib.ticker.StrMethodFormatter(valfmt)
-
-	# Loop over the data and create a `Text` for each "pixel".
-	# Change the text's color depending on the data.
-	texts = []
-	for i in range(data.shape[0]):
-		for j in range(data.shape[1]):
-			kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
-			text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
-			texts.append(text)
-
-	return texts
-
-
-def HeatMap(mat,numToClassX,numToClassY,title,cbarTitle,saveTo,annotate = False):
-	y,x = mat.shape
-	numClassesX = x
-	numClassesY = y
-	if annotate:
-		classLabelsX = [numToClassX[i] for i in range(numClassesX)]
-		classLabelsY = [numToClassY[i] for i in range(numClassesY)]
-	else:
-		classLabelsX = []
-		classLabelsY = []
-
-
-	fig, ax = plt.subplots()
-	im, cbar = heatmap(mat, classLabelsY, classLabelsX, ax=ax,
-					cmap="YlGn", cbarlabel=cbarTitle)
-	# if annotate:
-	# 	texts = annotate_heatmap(im, valfmt="{x:.1f} t")
-
-	ax.set_title(title)
-	fig.tight_layout()
-	plt.savefig(saveTo)
-	plt.clf()
-
-	
 
 
 
@@ -1688,62 +1360,6 @@ def FAdvReport(LoD,saveTo,numToClass,fname = 'AdvReport.txt'):
 			fH.write(pre+line)
 
 
-def dictToLineCutOff(d,numToClass):
-	revSortedD = sorted(d.items(), key=lambda kv: kv[1], reverse=True)
-	line = ''
-	numElem = len(revSortedD)
-	for classExample,weight in revSortedD:
-		# pdb.set_trace()
-		if weight >= 1/numElem:
-			line  += 'Class : %s - Weight : %f\t'%(str(numToClass.get(classExample)),weight)
-	return line.strip()+'\n'
-
-
-def FReportCutOff(LoD,saveTo,numToClass,fname = 'FReport-CutOff.txt'):
-	with open(os.path.join(saveTo,fname),'w') as fH:
-		for i,d in enumerate(LoD):
-			pre = 'Latent Factor : %d\t'%i
-			line = dictToLineCutOff(d,numToClass)
-			fH.write(pre+line)
-
-
-def dictToLineSameness(d,numToClass):
-	revSortedD = sorted(d.items(), key=lambda kv: kv[1], reverse=True)
-	# line = ''
-	classList = []
-	AdvClassList = []
-	numElem = len(revSortedD)
-	hyphen = "-"
-	for classExample,weight in revSortedD:
-		# pdb.set_trace()
-		if weight >= 1/numElem:
-			classString = str(numToClass.get(classExample))
-			if hyphen in classString:
-				AdvClassList.append(classString[classString.find(hyphen)+1:])
-			else:
-				classList.append(classString)
-	
-	classListSet = set(classList)
-	AdvClassListSet = set(AdvClassList)
-
-	commons = len(classListSet.intersection(AdvClassListSet))
-	# pdb.set_trace()
-
-	return str(commons)+'\n'
-
-
-def FReportSameness(LoD,saveTo,numToClass,fname = 'FReport-Commons.txt'):
-	with open(os.path.join(saveTo,fname),'w') as fH:
-		total = 0
-		for i,d in enumerate(LoD):
-			pre = 'Latent Factor : %d\t'%i
-			line = dictToLineSameness(d,numToClass)
-			total += int(line.strip())
-			fH.write(pre+line)
-		fH.write("Total :\t"+str(total))
-
-
-
 
 netLossTraining = []
 netLossVal1 = []
@@ -1758,327 +1374,194 @@ for i in range(model.countPosLayers()):
 mutualCoherenceCF = [[] for j in range(3)]
 classmeanKLPerEpoch = []
 FKLmeanPerEpoch = []
+for epoch in range(0,numEpochs):
+	epochFolder = 'Epoch Num %d'%epoch
+	try:
+		os.makedirs(os.path.join(outputFolderName,epochFolder))
+	except:
+		pass
 
-if networkFile == "None":
-	for epoch in range(0,numEpochs):
-		epochFolder = 'Epoch Num %d'%epoch
-		try:
-			os.makedirs(os.path.join(outputFolderName,epochFolder))
-		except:
-			pass
+	plt.figure()
+	fig,axes = plt.subplots(1,1,figsize=(7,7))
+	E.append(epoch) 
+	trainLoss = train(epoch)
+	scheduler.step()
+	netLossTraining.append(float(trainLoss))
+	# testval1()
+	if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
+		testval1Loss, testval1Acc = testval1()
+		netLossVal1.append(float(testval1Loss))
+		netAccVal1.append(float(testval1Acc))
+	# else if classBased=='False':
+	# 	testval1Loss, testval1Acc = testval1()
+	# 	netLossVal1.append(float(testval1Loss))
+	# 	netAccVal1.append(float(testval1Acc))
 
+
+	axes.set_ylabel("NLL Loss")
+	axes.set_xlabel("Epochs")
+	axes.set_title("Loss vs Epochs")
+	# axes[0].set_xlim([-1,1])
+	# axes[0].set_ylim([-0.5,4.5])
+	axes.semilogy(E, netLossTraining, color = 'r', linewidth=1, label = "Training Loss")
+	if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
+		axes.semilogy(E, netLossVal1, color = 'g', linewidth=1, label = "Validation Loss") ## For testing validation, set the dictionary of val set the same as test set
+	axes.legend(loc = "upper right")
+	axes.autoscale()
+
+	plt.savefig(os.path.join(outputFolderName,epochFolder,'LossVsEpochs'))
+	plt.clf()
+
+
+	
+	# #Accuracy Plots
+	if CIFARtrain.classToNum == CIFARval1.classToNum:#classListTrain == classListTest or classBased=='False':
 		plt.figure()
 		fig,axes = plt.subplots(1,1,figsize=(7,7))
-		E.append(epoch) 
-		trainLoss = train(epoch)
-		scheduler.step()
-		netLossTraining.append(float(trainLoss))
-		# testval1()
-		if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
-			testval1Loss, testval1Acc = testval1()
-			netLossVal1.append(float(testval1Loss))
-			netAccVal1.append(float(testval1Acc))
-		# else if classBased=='False':
-		# 	testval1Loss, testval1Acc = testval1()
-		# 	netLossVal1.append(float(testval1Loss))
-		# 	netAccVal1.append(float(testval1Acc))
-
-
-		axes.set_ylabel("NLL Loss")
+		axes.set_ylabel("Validation Accuracy")
 		axes.set_xlabel("Epochs")
-		axes.set_title("Loss vs Epochs")
+		axes.set_title("Accuracy vs Epochs")
 		# axes[0].set_xlim([-1,1])
 		# axes[0].set_ylim([-0.5,4.5])
-		axes.semilogy(E, netLossTraining, color = 'r', linewidth=1, label = "Training Loss")
-		if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
-			axes.semilogy(E, netLossVal1, color = 'g', linewidth=1, label = "Validation Loss") ## For testing validation, set the dictionary of val set the same as test set
+		axes.plot(E, netAccVal1, color = 'r', linewidth=1, label = "Validation Accuracy")
+		# axes[1].semilogy(E, netLossVal1, color = 'g', linewidth=1, label = "Validation Loss")
 		axes.legend(loc = "upper right")
 		axes.autoscale()
-
-		plt.savefig(os.path.join(outputFolderName,epochFolder,'LossVsEpochs'))
+		plt.savefig(os.path.join(outputFolderName,epochFolder,'AccuracyVsEpochs'))
 		plt.clf()
 
 
+	torch.save(model,os.path.join(outputFolderName,epochFolder,NetworkName+"_Epoch-%d"%epoch))
+	numToClassText(CIFARtrain.numToClass,os.path.join(outputFolderName,epochFolder,"numToClass.txt"))
+
+	# this was added to speed up experiments
+	if epoch == numEpochs-1:
 		
-		# #Accuracy Plots
-		if CIFARtrain.classToNum == CIFARval1.classToNum:#classListTrain == classListTest or classBased=='False':
-			plt.figure()
-			fig,axes = plt.subplots(1,1,figsize=(7,7))
-			axes.set_ylabel("Validation Accuracy")
-			axes.set_xlabel("Epochs")
-			axes.set_title("Accuracy vs Epochs")
-			# axes[0].set_xlim([-1,1])
-			# axes[0].set_ylim([-0.5,4.5])
-			axes.plot(E, netAccVal1, color = 'r', linewidth=1, label = "Validation Accuracy")
-			# axes[1].semilogy(E, netLossVal1, color = 'g', linewidth=1, label = "Validation Loss")
-			axes.legend(loc = "upper right")
-			axes.autoscale()
-			plt.savefig(os.path.join(outputFolderName,epochFolder,'AccuracyVsEpochs'))
-			plt.clf()
+
+		tupleOfData = probeVal1()
+		D1,A1 = tupleOfData
+		# pdb.set_trace()
+		D,A = genInputForTF(D1,A1)
+		# pdb.set_trace()
+		if actOnlyMode == 'True':
+			# D[0] = A[0] # Shift the first activation to D and keep the rest in A
+			# A = A[1:]
+			# # this will work with MNIST ONLY
+			# # This will lead to a situation where D[0] of the original setup is P[0] here
+			D = [] # emptying the D list
+			# If D list is empty, P list should also be empty.
 
 
-		torch.save(model,os.path.join(outputFolderName,epochFolder,NetworkName+"_Epoch-%d"%epoch))
-		numToClassText(CIFARtrain.numToClass,os.path.join(outputFolderName,epochFolder,"numToClass.txt"))
+		# pdb.set_trace()
+		# for i,mat in enumerate(D):
+			# print("D[%d] rank : %f\t D[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
 
-		# this was added to speed up experiments
-		if epoch == numEpochs-1:
-			
+		# for i,mat in enumerate(A):
+			# print("A[%d] rank : %f\t A[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
 
-			tupleOfData = probeVal1()
-			D1,A1 = tupleOfData
-			# pdb.set_trace()
-			D,A = genInputForTF(D1,A1)
-			# pdb.set_trace()
-			if actOnlyMode == 'True':
-				# D[0] = A[0] # Shift the first activation to D and keep the rest in A
-				# A = A[1:]
-				# # this will work with MNIST ONLY
-				# # This will lead to a situation where D[0] of the original setup is P[0] here
-				D = [] # emptying the D list
-				# If D list is empty, P list should also be empty.
+		# pdb.set_trace()
 
 
-			# pdb.set_trace()
-			# for i,mat in enumerate(D):
-				# print("D[%d] rank : %f\t D[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
-
-			# for i,mat in enumerate(A):
-				# print("A[%d] rank : %f\t A[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
-
-			# pdb.set_trace()
+		os.chdir(outputFolderName) # getting to output folder
+		
 
 
-			os.chdir(outputFolderName) # getting to output folder
-			
+		
 
+		##### Layer by Layer analysis
 
-			
+		analysisType = 'SingleFactorization'
+		# setting up dictionary for single factorization mutual coherence
+		
+		
 
-			##### Layer by Layer analysis
-
-			analysisType = 'SingleFactorization'
-			# setting up dictionary for single factorization mutual coherence
-			
-			
-
-			for i,mat in enumerate(A):
-				print("***** Analysis of A[%d] *****\n"%i)
-				F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
-				print("F shape : %s \t"%(F.shape,))
-
-				try:
-					os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-					os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-				except:
-					pass
-
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-				generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
-
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-				generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity','Latent Factor','Latent Factor')
-			# 	# pdb.set_trace()
-			# 	MutualCoherence = mutualCoherence(F)
-			# 	for j,array in enumerate(mutualCoherenceSF[i]):
-			# 		array.append(MutualCoherence[j])
-
-			# 	# pdb.set_trace()
-			# 	# print("plotting",mutualCoherenceSF[i])
-			# 	plotLists(mutualCoherenceSF[i],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
-
-			# 	# for j,layers in enumerate(mutualCoherenceSF):
-			# 	# 	pdb.set_trace()
-			# 	# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
-			# 	# This needs to be changed when using class sampled
-				if classBased == 'True':
-					vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
-					SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-					topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-				else:
-					vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
-					SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-					topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
-				#F.T used because of the notational change
-				# somewhere downstream to properly populate lF
-					# NvF = normalize(vF,axis = 0)
-
-
-
-
-			# 	# pdb.set_trace()
-			# 	### Class Probabilities
-			# 	classProbMat = vFlFToClassMat(vF,lF)
-			# 	# superClassProbMat = vFlFToClassMat(SvF,SlF)
-
-			# 	numDim = classProbMat.shape[0]
-			# 	fontSize = 10
-			# 	annotations = True
-			# 	if numDim>100:
-			# 		annotations = False
-			# 	elif numDim>10:
-			# 		fontSize *= 10/numDim
-
-			# 	## Computing hellinger
-			# 	classHellinger = pairwiseHellinger(classProbMat)
-			# 	floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-				
-			# 	# superClassHellinger = pairwiseHellinger(superClassProbMat)
-			# 	# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-			# 	## Computing bhattacharyya
-			# 	classBhattacharyya = pairwiseBhattacharyya(classProbMat)
-			# 	floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-			# 	# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
-			# 	# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-
-			# 	## Computing KL
-			# 	# FKL = pairwiseKL(F)
-			# 	# FKLmeanPerEpoch.append(FKL.mean())
-
-
-			# 	classKL = pairwiseKL(classProbMat)
-			# 	# classmeanKLPerEpoch.append(classKL.mean())
-			# 	floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-			# 	# superClassKL = pairwiseKL(superClassProbMat)
-			# 	# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-			# 	# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
-				
-			# 	# pdb.set_trace()
-				lod = generateReportF(vF,lF)
-				slod = generateReportF(SvF,SlF)
-				# pdb.set_trace()
-
-				FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
-				FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
-				FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
-				FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
-
-			
-
-
-
-			os.chdir(os.path.join(outputFolderName,epochFolder))
-
-			##### coupled factorization #####
-			F,P,O,LOSSTOTAL,LOSSACT = cnmf(D, A, Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF, lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
+		for i,mat in enumerate(A):
+			print("***** Analysis of A[%d] *****\n"%i)
+			F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
 			print("F shape : %s \t"%(F.shape,))
-			# pdb.set_trace()
-			# ********** Generating Reports **********
 
-			
-
-			
-
-
-			analysisType = 'CoupledFactorization'
 			try:
-				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType))
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
 			except:
 				pass
 
-			parentDirLatentImaging = 'LatentAnalysis'
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
+			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
 
-			try:
-				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-			except:
-				pass
-				
-			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity','Latent Factor','Latent Factor')
+		# 	# pdb.set_trace()
+		# 	MutualCoherence = mutualCoherence(F)
+		# 	for j,array in enumerate(mutualCoherenceSF[i]):
+		# 		array.append(MutualCoherence[j])
 
-			#Latent Images to be stored here
-			if actOnlyMode == 'False':
-				latentImages = 'latentImages'
-				try:
-					os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-				except:
-					pass
+		# 	# pdb.set_trace()
+		# 	# print("plotting",mutualCoherenceSF[i])
+		# 	plotLists(mutualCoherenceSF[i],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
 
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-				generateLatentImages(P,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-			# Neural activations latent map
-
-				latentActivations = 'latentActivations'
-				try:
-					os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-				except:
-					pass
-
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-				generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-
-			elif actOnlyMode == "True":
-
-				latentActivations = 'latentActivations'
-				try:
-					os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-				except:
-					pass
-
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-				generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-				# Because D[0] is A[0] of the original setup
-				os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-			# Top Classes per latent Dimension
-
-			topClassesLatentFactor = 'TopClassesPerLatentFactor'
-
-			try:
-				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-
-			except:
-				pass
-
-			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-			generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-			
-			MutualCoherence = mutualCoherence(F)
-			for index,val in enumerate(MutualCoherence):
-				mutualCoherenceCF[index].append(val)
-
-
-			plotLists(mutualCoherenceCF,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'Mutual-Coherence-matrix-F'))
-			# pdb.set_trace()
-
-			# This needs to be changed when using class sampled
+		# 	# for j,layers in enumerate(mutualCoherenceSF):
+		# 	# 	pdb.set_trace()
+		# 	# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
+		# 	# This needs to be changed when using class sampled
 			if classBased == 'True':
 				vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
 				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-				topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
-				topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
+				topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
 			else:
 				vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 				SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-				topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
-				topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
+				topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
 			#F.T used because of the notational change
 			# somewhere downstream to properly populate lF
 				# NvF = normalize(vF,axis = 0)
 
 
-			### Class Probabilities
-			classProbMat = vFlFToClassMat(vF,lF)
-			superClassProbMat = vFlFToClassMat(SvF,SlF)
 
-			numDim = classProbMat.shape[0]
-			fontSize = 10
-			annotations = True
-			if numDim>100:
-				annotations = False
-			elif numDim>10:
-				fontSize *= 10/numDim
 
+		# 	# pdb.set_trace()
+		# 	### Class Probabilities
+		# 	classProbMat = vFlFToClassMat(vF,lF)
+		# 	# superClassProbMat = vFlFToClassMat(SvF,SlF)
+
+		# 	numDim = classProbMat.shape[0]
+		# 	fontSize = 10
+		# 	annotations = True
+		# 	if numDim>100:
+		# 		annotations = False
+		# 	elif numDim>10:
+		# 		fontSize *= 10/numDim
+
+		# 	## Computing hellinger
+		# 	classHellinger = pairwiseHellinger(classProbMat)
+		# 	floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+			
+		# 	# superClassHellinger = pairwiseHellinger(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+
+
+		# 	## Computing bhattacharyya
+		# 	classBhattacharyya = pairwiseBhattacharyya(classProbMat)
+		# 	floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+
+
+
+		# 	## Computing KL
+		# 	# FKL = pairwiseKL(F)
+		# 	# FKLmeanPerEpoch.append(FKL.mean())
+
+
+		# 	classKL = pairwiseKL(classProbMat)
+		# 	# classmeanKLPerEpoch.append(classKL.mean())
+		# 	floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+		# 	# superClassKL = pairwiseKL(superClassProbMat)
+		# 	# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
+
+		# 	# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
+			
+		# 	# pdb.set_trace()
 			lod = generateReportF(vF,lF)
 			slod = generateReportF(SvF,SlF)
 			# pdb.set_trace()
@@ -2088,294 +1571,135 @@ if networkFile == "None":
 			FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
 			FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
 
-			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-else:
-	print("*** Starting Factorization on Loaded Network ***")
+		
 
 
-	adv1Loss, adv1Acc,c2cMat,c2scMat, sc2scMat = testAdv1()
-	epochFolder = 'Epoch Num %d'%(numEpochs-1,)
-	tupleOfData = probeVal1()
-	D1,A1 = tupleOfData
-	# pdb.set_trace()
-	D,A = genInputForTF(D1,A1)
-	# pdb.set_trace()
-	if actOnlyMode == 'True':
-		# D[0] = A[0] # Shift the first activation to D and keep the rest in A
-		# A = A[1:]
-		# # this will work with MNIST ONLY
-		# # This will lead to a situation where D[0] of the original setup is P[0] here
-		D = [] # emptying the D list
-		# If D list is empty, P list should also be empty.
 
+		os.chdir(os.path.join(outputFolderName,epochFolder))
 
-	# pdb.set_trace()
-	# for i,mat in enumerate(D):
-		# print("D[%d] rank : %f\t D[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
-
-	# for i,mat in enumerate(A):
-		# print("A[%d] rank : %f\t A[%d] shape : %s\n"%(i,np.linalg.matrix_rank(mat),i,mat.shape))
-
-	# pdb.set_trace()
-
-
-	os.chdir(outputFolderName) # getting to output folder
-
-	HeatMap(c2cMat,CIFARtrain.numToClass,CIFARtrain.numToClass,"Class to Class Missclassification","#misclassications",os.path.join(outputFolderName,"classToClassMiss.png"),False)
-	HeatMap(c2scMat,CIFARtrain.superClassSetReverse,CIFARtrain.numToClass,"Class to Super Class Missclassification","#misclassications",os.path.join(outputFolderName,"classToSuperClassMiss.png"),False)
-	HeatMap(sc2scMat,CIFARtrain.superClassSetReverse,CIFARtrain.superClassSetReverse,"Super Class to Super Class Missclassification","#misclassications",os.path.join(outputFolderName,"superClassToSuperClassMiss.png"),False)
-	# floatMatrixToGS(c2cMat,os.path.join(outputFolderName,"classToClassMiss2.png"),10,10)
-	# floatMatrixToGS(c2scMat,os.path.join(outputFolderName,"classToSuperClassMiss2.png"),10,10)
-	# floatMatrixToGS(sc2scMat,os.path.join(outputFolderName,"superClassToSuperClassMiss2.png"),10,10)
-	floatMatrixToHeatMapSNS(c2cMat,os.path.join(outputFolderName,"classToClassMiss2.png"),"Class to Class Missclassification", xLabel= "Classes", yLabel = "Classes", dpi = 1200,cmap = 'YlGn')
-	floatMatrixToHeatMapSNS(c2scMat,os.path.join(outputFolderName,"classToSuperClassMiss2.png"),"Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Classes", dpi = 1200,cmap = 'YlGn')
-	floatMatrixToHeatMapSNS(sc2scMat,os.path.join(outputFolderName,"SuperclassToSuperClassMiss2.png"),"Super Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Super Classes", dpi = 1200,cmap = 'YlGn')
-
-
-	
-
-	##### Layer by Layer analysis
-
-	analysisType = 'SingleFactorization'
-	# setting up dictionary for single factorization mutual coherence
-	
-	
-
-	for i,mat in enumerate(A):
-		print("***** Analysis of A[%d] *****\n"%i)
-		F,P,O,LOSSTOTAL,LOSSACT = cnmf([], [mat], Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF,lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
+		##### coupled factorization #####
+		F,P,O,LOSSTOTAL,LOSSACT = cnmf(D, A, Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF, lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
 		print("F shape : %s \t"%(F.shape,))
+		# pdb.set_trace()
+		# ********** Generating Reports **********
 
+		
+
+		
+
+
+		analysisType = 'CoupledFactorization'
 		try:
-			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
+			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType))
 		except:
 			pass
 
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i))
-		generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-O[%d]'%i),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
+		parentDirLatentImaging = 'LatentAnalysis'
 
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'))
-		generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F'),'Cosine Similarity','Latent Factor','Latent Factor')
-	# 	# pdb.set_trace()
-	# 	MutualCoherence = mutualCoherence(F)
-	# 	for j,array in enumerate(mutualCoherenceSF[i]):
-	# 		array.append(MutualCoherence[j])
+		try:
+			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
+		except:
+			pass
+			
+		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
-	# 	# pdb.set_trace()
-	# 	# print("plotting",mutualCoherenceSF[i])
-	# 	plotLists(mutualCoherenceSF[i],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
+		#Latent Images to be stored here
+		if actOnlyMode == 'False':
+			latentImages = 'latentImages'
+			try:
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
+			except:
+				pass
 
-	# 	# for j,layers in enumerate(mutualCoherenceSF):
-	# 	# 	pdb.set_trace()
-	# 	# 	plotLists(mutualCoherenceSF[layers],os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','Mutual-Coherence-matrix-F'))
-	# 	# This needs to be changed when using class sampled
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
+			generateLatentImages(P,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
+
+
+		# Neural activations latent map
+
+			latentActivations = 'latentActivations'
+			try:
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
+			except:
+				pass
+
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
+			generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
+
+
+
+		elif actOnlyMode == "True":
+
+			latentActivations = 'latentActivations'
+			try:
+				os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
+			except:
+				pass
+
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
+			generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
+			# Because D[0] is A[0] of the original setup
+			os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
+
+
+		# Top Classes per latent Dimension
+
+		topClassesLatentFactor = 'TopClassesPerLatentFactor'
+
+		try:
+			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
+
+		except:
+			pass
+
+		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
+		generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
+		
+		MutualCoherence = mutualCoherence(F)
+		for index,val in enumerate(MutualCoherence):
+			mutualCoherenceCF[index].append(val)
+
+
+		plotLists(mutualCoherenceCF,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'Mutual-Coherence-matrix-F'))
+		# pdb.set_trace()
+
+		# This needs to be changed when using class sampled
 		if classBased == 'True':
 			vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
 			SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-			topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+			topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
+			topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		else:
 			vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 			SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-			topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+			topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
+			topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		#F.T used because of the notational change
 		# somewhere downstream to properly populate lF
 			# NvF = normalize(vF,axis = 0)
 
 
+		### Class Probabilities
+		classProbMat = vFlFToClassMat(vF,lF)
+		superClassProbMat = vFlFToClassMat(SvF,SlF)
 
+		numDim = classProbMat.shape[0]
+		fontSize = 10
+		annotations = True
+		if numDim>100:
+			annotations = False
+		elif numDim>10:
+			fontSize *= 10/numDim
 
-	# 	# pdb.set_trace()
-	# 	### Class Probabilities
-	# 	classProbMat = vFlFToClassMat(vF,lF)
-	# 	# superClassProbMat = vFlFToClassMat(SvF,SlF)
-
-	# 	numDim = classProbMat.shape[0]
-	# 	fontSize = 10
-	# 	annotations = True
-	# 	if numDim>100:
-	# 		annotations = False
-	# 	elif numDim>10:
-	# 		fontSize *= 10/numDim
-
-	# 	## Computing hellinger
-	# 	classHellinger = pairwiseHellinger(classProbMat)
-	# 	floatMatrixToHeatMapSNS(classHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-		
-	# 	# superClassHellinger = pairwiseHellinger(superClassProbMat)
-	# 	# floatMatrixToHeatMapSNS(superClassHellinger, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassHellinger'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-	# 	## Computing bhattacharyya
-	# 	classBhattacharyya = pairwiseBhattacharyya(classProbMat)
-	# 	floatMatrixToHeatMapSNS(classBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-	# 	# superClassBhattacharyya = pairwiseBhattacharyya(superClassProbMat)
-	# 	# floatMatrixToHeatMapSNS(superClassBhattacharyya, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassBhatt'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-
-
-	# 	## Computing KL
-	# 	# FKL = pairwiseKL(F)
-	# 	# FKLmeanPerEpoch.append(FKL.mean())
-
-
-	# 	classKL = pairwiseKL(classProbMat)
-	# 	# classmeanKLPerEpoch.append(classKL.mean())
-	# 	floatMatrixToHeatMapSNS(classKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-ClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-	# 	# superClassKL = pairwiseKL(superClassProbMat)
-	# 	# floatMatrixToHeatMapSNS(superClassKL, os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','LF-superClassKL'),annot = annotations, fmt = "1.2f",cmap = 'viridis',annotFontSize = fontSize)
-
-	# 	# plotLists([FKLmeanPerEpoch,classmeanKLPerEpoch], os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'meanClassKL.png'),legends = ['Unsupervised KL','Class Based KL'])
-		
-	# 	# pdb.set_trace()
 		lod = generateReportF(vF,lF)
 		slod = generateReportF(SvF,SlF)
 		# pdb.set_trace()
 
 		FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
 		FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
-		FReportCutOff(lod,os.getcwd(),CIFARval1.numToClass)
-		FReportCutOff(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass-CutOff.txt')
-		FReportSameness(lod,os.getcwd(),CIFARval1.numToClass)
-		FReportSameness(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReport-SuperClassCommons.txt')
 		FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
 		FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
 
-	
-
-
-
-	os.chdir(os.path.join(outputFolderName,epochFolder))
-
-	##### coupled factorization #####
-	F,P,O,LOSSTOTAL,LOSSACT = cnmf(D, A, Rank1, P_init = P_init, groupSparseF = groupSparseF, numGroups = numGroups, lmbdaF=lmbdaF, lmbdaTV = lmbdaTV, lmbdaOrtho=lmbdaOrtho, maxIter = maxIters, compute_fit = True)
-	print("F shape : %s \t"%(F.shape,))
-	# pdb.set_trace()
-	# ********** Generating Reports **********
-
-	
-
-	
-
-
-	analysisType = 'CoupledFactorization'
-	try:
-		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType))
-	except:
-		pass
-
-	parentDirLatentImaging = 'LatentAnalysis'
-
-	try:
-		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-	except:
-		pass
-		
-	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-	#Latent Images to be stored here
-	if actOnlyMode == 'False':
-		latentImages = 'latentImages'
-		try:
-			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-		except:
-			pass
-
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
-		generateLatentImages(P,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentImages))
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-	# Neural activations latent map
-
-		latentActivations = 'latentActivations'
-		try:
-			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-		except:
-			pass
-
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-		generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),'Cosine Similarity w.r.t Neurons','Latent Factor','Latent Factor')
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-
-	elif actOnlyMode == "True":
-
-		latentActivations = 'latentActivations'
-		try:
-			os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-		except:
-			pass
-
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-		generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
-		# Because D[0] is A[0] of the original setup
-		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-
-
-	# Top Classes per latent Dimension
-
-	topClassesLatentFactor = 'TopClassesPerLatentFactor'
-
-	try:
-		os.makedirs(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-
-	except:
-		pass
-
-	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-	generateLatentActivations([F.T],os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor))
-	
-	MutualCoherence = mutualCoherence(F)
-	for index,val in enumerate(MutualCoherence):
-		mutualCoherenceCF[index].append(val)
-
-
-	plotLists(mutualCoherenceCF,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'Mutual-Coherence-matrix-F'))
-	# pdb.set_trace()
-
-	# This needs to be changed when using class sampled
-	if classBased == 'True':
-		vF,iF,lF = analyzeF(F.T,CIFARval1.classSampledLabels)
-		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
-		topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
-		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
-	else:
-		vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
-		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
-		topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
-		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
-	#F.T used because of the notational change
-	# somewhere downstream to properly populate lF
-		# NvF = normalize(vF,axis = 0)
-
-
-	### Class Probabilities
-	classProbMat = vFlFToClassMat(vF,lF)
-	superClassProbMat = vFlFToClassMat(SvF,SlF)
-
-	numDim = classProbMat.shape[0]
-	fontSize = 10
-	annotations = True
-	if numDim>100:
-		annotations = False
-	elif numDim>10:
-		fontSize *= 10/numDim
-
-	lod = generateReportF(vF,lF)
-	slod = generateReportF(SvF,SlF)
-	# pdb.set_trace()
-
-	FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
-	FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
-	FReportCutOff(lod,os.getcwd(),CIFARval1.numToClass)
-	FReportCutOff(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass-CutOff.txt')
-	FReportSameness(lod,os.getcwd(),CIFARval1.numToClass)
-	FReportSameness(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReport-SuperClassCommons.txt')
-	FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
-	FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
-
-	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
-

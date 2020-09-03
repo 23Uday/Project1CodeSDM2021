@@ -425,7 +425,7 @@ class ResNet(nn.Module):
 		output = output.view(output.size(0), -1)
 		output = self.fc(output)
 
-		return FU.log_softmax(output)
+		return FU.log_softmax(output),(x1,x2,x3) 
 
 	def countPosLayers(self):
 		return 3
@@ -449,7 +449,7 @@ def train(epoch):
 		# data, target = Variable(data), Variable(target)
 		data, target = Variable(data).cuda(), Variable(target).cuda() # GPU
 		optimizer.zero_grad()
-		output = model(data)
+		output,act = model(data)
 		# pdb.set_trace()
 		# output = model(data)
 		loss = FU.nll_loss(output, target)
@@ -474,7 +474,7 @@ def testval1(): # add X-val later
 	for data, target in val1_loader:
 		# data, target = Variable(data, volatile=True), Variable(target)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
-		output = model(data)
+		output,act = model(data)
 		# output = model(data)
 		# sum up batch loss
 		# pdb.set_trace()
@@ -494,6 +494,14 @@ for epoch in range(0,numEpochs):
 	scheduler.step()
 	if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
 		testval1Loss, testval1Acc = testval1()
+
+torch.save(model,os.path.join(outputFolderName,NetworkName))
+# device = torch.device("cuda")
+# model = ResNet(BasicBlock, [2, 2, 2, 2], numClasses)
+# model = torch.load(os.path.join(outputFolderName,NetworkName))
+# model.to(device)
+
+
 
 def fgsm_attack(image, epsilon, data_grad):
 	# Collect the element-wise sign of the data gradient
@@ -592,7 +600,7 @@ def test( model, device, test_loader, epsilon ):
 		data.requires_grad = True
 
 		# Forward pass the data through the model
-		output = model(data)
+		output,act = model(data)
 		init_pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
 
 		# If the initial prediction is wrong, dont bother attacking, just move on
@@ -616,7 +624,7 @@ def test( model, device, test_loader, epsilon ):
 		perturbed_data = fgsm_attack(data, epsilon, data_grad)
 
 		# Re-classify the perturbed image
-		output = model(perturbed_data)
+		output,act = model(perturbed_data)
 
 		# Check for success
 		final_pred = output.max(1, keepdim=True)[1] # get the index of the max log-probability

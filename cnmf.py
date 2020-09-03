@@ -340,7 +340,7 @@ def cnmf(D,A,rank1,P_init,groupSparseF = True,**kwargs):
 			sumRF = np.ndarray.sum(F,axis= 1)[:,np.newaxis]
 			F = F/sumRF
 		else:
-			print("Multiplicative Update of F")
+			# print("Multiplicative Update of F")
 			# F = _updateF(D,A,F,P,O,lmbdaOrtho,S,spatialGrad,gradNorm,gradOp,lmbdaF,lmbdaTV)
 			F = _updateF(D,A,F,P,O,lmbdaF)
 			# pdb.set_trace()
