@@ -983,16 +983,16 @@ class NetVGG11(nn.Module): # github VGG, use transforms
 		# if self.evalMode == 'all':
 			# return FU.log_softmax(x),(x1,x3,x4,x6,x7,x8,x10,x11,x12,x14,x15,x16,x18,x19,FU.log_softmax(x))
 		# elif self.evalMode == 'pool':
-		return FU.log_softmax(x),(x1,x3,x4,x6,x7,x8,x10,x11,x12,x14,x15,x16,x18,x19)
+		return FU.log_softmax(x),(x1,x3,x4,x6,x7,x8,x10,x11,x12,x14,x15,x16,x18)
 
 	def countConvLayers(self):
 		# if self.evalMode == 'all':
 		# 	return 15
 		# elif self.evalMode == 'pool':
-		return 14
+		return 13
 
 	def countPosLayers(self):
-		return 14
+		return 13
 
 
 
