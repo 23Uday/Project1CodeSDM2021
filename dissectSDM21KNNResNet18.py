@@ -49,13 +49,14 @@ import operator
 import networkx as nx
 from networkx.algorithms import bipartite
 from collections import Counter
+from tools import analyzeFKNN, analyzeFKNNPlots1
 
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser() # argparser object
 parser.add_argument("rootDir", help = "Enter the name of root folder which containts the data subfolders :",type = str)
 parser.add_argument("rootDirTest", help = "Enter the name of root folder which containts the test data subfolders :",type = str)
-parser.add_argument("rootDirAdv", help = "Enter the name of root folder which containts the original adv data subfolders :",type = str)
+# parser.add_argument("rootDirAdv", help = "Enter the name of root folder which containts the original adv data subfolders :",type = str)
 parser.add_argument("networkFile", help = "Enter the name of root folder which containts the Network :",type = str)
 parser.add_argument("outputFolderName", help = "Enter the name(Path) of the Output Folder :", type = str)
 parser.add_argument("NetworkName", help = "Enter the name(Path) of the network file :", type = str)
@@ -88,7 +89,8 @@ args = parser.parse_args()
 
 rootDir = args.rootDir
 rootDirTest = args.rootDirTest
-rootDirAdv = args.rootDirAdv
+# rootDirAdv = args.rootDirAdv
+rootDirAdv = "None"
 if rootDirAdv != "None":
 	advAccuracy = True
 else:
@@ -301,7 +303,7 @@ class Dataset(Dataset):
 		else:
 			img = self.transform(img)
 		# pdb.set_trace(0)
-		return (img,self.all_sampled_labels[idx])
+		return (img,self.all_sampled_labels[idx],self.all_sampled_super_labels[idx],self.all_sampled_image_paths[idx])
 
 
 	# Helper Functions	
@@ -704,10 +706,10 @@ train_loader = torch.utils.data.DataLoader(dataset=CIFARtrain,
 val1_loader = torch.utils.data.DataLoader(dataset=CIFARval1,
 										  batch_size=test_batch_size,
 										  shuffle=False)
-
-adv1_loader = torch.utils.data.DataLoader(dataset=CIFARAdv1,
-										  batch_size=test_batch_size,
-										  shuffle=False)
+if rootDirAdv != "None":
+	adv1_loader = torch.utils.data.DataLoader(dataset=CIFARAdv1,
+											batch_size=test_batch_size,
+											shuffle=False)
 
 
 # val2_loader = torch.utils.data.DataLoader(dataset=MNISTval2,
@@ -925,7 +927,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,60,90
 def train(epoch):
 	model.train()
 	total_loss = 0
-	for batch_idx, (data, target) in enumerate(train_loader):
+	for batch_idx, (data, target, superTarget, datapath) in enumerate(train_loader):
 		# pdb.set_trace()
 		# data, target = Variable(data), Variable(target)
 		data, target = Variable(data).cuda(), Variable(target).cuda() # GPU
@@ -952,7 +954,7 @@ def testval1(): # add X-val later
 	model.eval()
 	val1_loss = 0
 	correct = 0
-	for data, target in val1_loader:
+	for data, target, superTarget, datapath in val1_loader:
 		# data, target = Variable(data, volatile=True), Variable(target)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
 		output,act = model(data)
@@ -980,7 +982,7 @@ def testAdv1(): # add X-val later
 	c2cMat = np.zeros((numClasses,numClasses))
 	c2scMat = np.zeros((numClasses,numSuperClasses))
 	sc2scMat = np.zeros((numSuperClasses,numSuperClasses))
-	for data, target in adv1_loader:
+	for data, target, superTarget, datapath in adv1_loader:
 		# data, target = Variable(data, volatile=True), Variable(target)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
 		output,act = model(data)
@@ -1012,8 +1014,12 @@ def probeVal1():
 	# A1 = []
 	# A2 = []
 	targetList = []
-	for data, target in val1_loader:
+	supertargetList = []
+	datapathList = []
+	for data, target, superTarget, datapath in val1_loader:
 		targetList.append(int(target))
+		supertargetList.append(int(superTarget))
+		datapathList.append(datapath)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda()
 		# pdb.set_trace()
 		inputImage = data.data.cpu().numpy()
@@ -1033,7 +1039,7 @@ def probeVal1():
 			A[j].append(act[j].data.cpu().numpy()[0])
 		# pdb.set_trace()
 	# model.cuda()
-	return D,A,targetList
+	return D,A,targetList, supertargetList, datapathList
 
 
 
@@ -2121,11 +2127,37 @@ if networkFile == "None":
 else:
 	print("*** Starting Factorization on Loaded Network ***")
 
-
-	adv1Loss, adv1Acc,c2cMat,c2scMat, sc2scMat = testAdv1()
+	if rootDirAdv != "None":
+		adv1Loss, adv1Acc,c2cMat,c2scMat, sc2scMat = testAdv1()
 	epochFolder = 'Epoch Num %d'%(numEpochs-1,)
 	tupleOfData = probeVal1()
-	D1,A1 = tupleOfData
+	D1,A1,targetList, supertargetList, datapathList = tupleOfData
+	dpl = [elem[0] for elem in datapathList]
+
+	if classBased == 'True':
+		if CIFARval1.classSampledLabels == targetList:
+			print("Target List same as class sampled Labels")
+		else:
+			print("Target List NOT same as class sampled Labels")
+	else: 
+		if CIFARval1.all_sampled_labels == targetList:
+			print("Target List same as sampled Labels")
+		else:
+			print("Target List NOT same as sampled Labels")
+		
+		if CIFARval1.all_sampled_super_labels == supertargetList:
+			print("Super Class List same as super sampled Labels")
+		else:
+			print("Super Target List NOT same as super sampled Labels")
+
+		if dpl == CIFARval1.all_sampled_image_paths:
+			print("Path list same")
+		else:
+			print("Path List not same")
+
+	
+
+	
 	# pdb.set_trace()
 	D,A = genInputForTF(D1,A1)
 	# pdb.set_trace()
@@ -2159,10 +2191,10 @@ else:
 	# floatMatrixToHeatMapSNS(c2cMat,os.path.join(outputFolderName,"classToClassMiss2.png"),"Class to Class Missclassification", xLabel= "Classes", yLabel = "Classes", dpi = 1200,cmap = 'YlGn')
 	# floatMatrixToHeatMapSNS(c2scMat,os.path.join(outputFolderName,"classToSuperClassMiss2.png"),"Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Classes", dpi = 1200,cmap = 'YlGn')
 	# floatMatrixToHeatMapSNS(sc2scMat,os.path.join(outputFolderName,"SuperclassToSuperClassMiss2.png"),"Super Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Super Classes", dpi = 1200,cmap = 'YlGn')
-
-	matShow(c2cMat,os.path.join(outputFolderName,"classToClassMiss2.png"),title = "Class to Class Missclassification", xLabel= "Classes", yLabel = "Classes")
-	matShow(c2scMat,os.path.join(outputFolderName,"classToSuperClassMiss2.png"),title = "Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Classes")
-	matShow(sc2scMat,os.path.join(outputFolderName,"SuperclassToSuperClassMiss2.png"), title = "Super Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Super Classes")
+	if rootDirAdv != "None":
+		matShow(c2cMat,os.path.join(outputFolderName,"classToClassMiss2.png"),title = "Class to Class Missclassification", xLabel= "Classes", yLabel = "Classes")
+		matShow(c2scMat,os.path.join(outputFolderName,"classToSuperClassMiss2.png"),title = "Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Classes")
+		matShow(sc2scMat,os.path.join(outputFolderName,"SuperclassToSuperClassMiss2.png"), title = "Super Class to Super Class Missclassification", xLabel= "Super Classes", yLabel = "Super Classes")
 
 
 	
@@ -2211,6 +2243,8 @@ else:
 			vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 			SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
 			topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','topImagesPerLatentFactor'))
+			# knnLFDistMat, knnLFEnt = analyzeFKNN(F.T,targetList)
+			# analyzeFKNNPlots1(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.all_sampled_labels,CIFARval1.all_sampled_super_labels,dpl,os.path.join(outputFolderName,epochFolder,analysisType,'matrix-A[%d]'%i,'matrix-F','KNNbasedAnalysis1'))
 		#F.T used because of the notational change
 		# somewhere downstream to properly populate lF
 			# NvF = normalize(vF,axis = 0)
@@ -2374,11 +2408,15 @@ else:
 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.superclassSampledLabels)
 		topImagesPerLatentFactor(vF,iF,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
 		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
+		knnLFDistMat, knnLFEnt = analyzeFKNN(F.T,targetList)
+		analyzeFKNNPlots1(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.classSampledLabels,CIFARval1.superclassSampledLabels,dpl,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis1'))
 	else:
 		vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
 		topImagesPerLatentFactor(vF,iF,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Raw'))
 		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
+		knnLFDistMat, knnLFEnt = analyzeFKNN(F.T,targetList)
+		analyzeFKNNPlots1(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.all_sampled_labels,CIFARval1.all_sampled_super_labels,dpl,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis1'))
 	#F.T used because of the notational change
 	# somewhere downstream to properly populate lF
 		# NvF = normalize(vF,axis = 0)
