@@ -49,7 +49,7 @@ import operator
 import networkx as nx
 from networkx.algorithms import bipartite
 from collections import Counter
-from tools import analyzeFKNN, analyzeFKNNPlots1, neuralEvalAnalysis
+from tools import analyzeFKNN, analyzeFKNNPlots1
 
 warnings.filterwarnings("ignore")
 
@@ -2363,7 +2363,6 @@ else:
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 		generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),title1 = "Neuron Latent Representations", xLabel1 = "Latent Dimension", yLabel1 = "Neurons",title3='Cosine Similarity w.r.t Neurons',xLabel3 ='Latent Factor',yLabel3 ='Latent Factor')
-		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),3)
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
 
@@ -2378,7 +2377,6 @@ else:
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 		generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),title1 = "Neuron Latent Representations", xLabel1 = "Latent Dimension", yLabel1 = "Neurons",title3='Cosine Similarity w.r.t Neurons',xLabel3 ='Latent Factor',yLabel3 ='Latent Factor')
-		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),3)
 		# Because D[0] is A[0] of the original setup
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
@@ -2442,12 +2440,12 @@ else:
 
 	FReport(lod,os.getcwd(),CIFARval1.numToClass) # Writing F Report
 	FReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass.txt') # Writing F Report
-	# FReportCutOff(lod,os.getcwd(),CIFARval1.numToClass)
-	# FReportCutOff(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass-CutOff.txt')
-	# FReportSameness(lod,os.getcwd(),CIFARval1.numToClass)
-	# FReportSameness(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReport-SuperClassCommons.txt')
-	# FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
-	# FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
+	FReportCutOff(lod,os.getcwd(),CIFARval1.numToClass)
+	FReportCutOff(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReportSuperClass-CutOff.txt')
+	FReportSameness(lod,os.getcwd(),CIFARval1.numToClass)
+	FReportSameness(slod,os.getcwd(),CIFARval1.superClassSetReverse,'FReport-SuperClassCommons.txt')
+	FAdvReport(lod,os.getcwd(),CIFARval1.numToClass,'ClassBasedAdvReport.txt')
+	FAdvReport(slod,os.getcwd(),CIFARval1.superClassSetReverse,'SuperClassBasedAdvReport.txt')
 
 	os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 

@@ -51,6 +51,7 @@ from networkx.algorithms import bipartite
 from collections import Counter
 from sklearn.neighbors import NearestNeighbors
 from scipy.stats import entropy
+from numpy import linalg as LA
 
 
 
@@ -734,12 +735,15 @@ def barPlot(yVals,xVals,title,yLabel,xLabel,saveTo):
 	fig = plt.figure()
 	# ax = fig.add_axes([0,0,1,1])
 	plt.style.use('ggplot')
+	plt.rcParams['axes.facecolor'] = 'white'
+	plt.gca().set_frame_on(True)
 	xpos = [i for i in range(len(xVals))]
-	plt.title(title)
-	plt.ylabel(yLabel)
-	plt.xlabel(xLabel)
+	plt.title(title, fontsize=22)
+	plt.ylabel(yLabel,fontsize=18)
+	plt.xlabel(xLabel,fontsize=18)
 	plt.bar(xpos,yVals,color='green')
 	plt.xticks(xpos, xVals,rotation = 90)
+	plt.tight_layout()
 	# plt.figure(facecolor="white")
 	plt.savefig(saveTo)
 	plt.clf()
@@ -767,3 +771,45 @@ def analyzeFKNNPlots1(distMat,entArr,num2ClassDict,num2SuperClassDict,classLabel
 
 
 	
+def neuralEvalAnalysis(OList,saveTo, numEvals=7):
+	print("*** Plotting Eigenvalues ***")
+
+	EValList = np.zeros((len(OList),numEvals))
+	EValFull = np.zeros((len(OList),OList[0].shape[1]))
+	for j,Oj in enumerate(OList):
+		EValList[j,:] = LA.eigvals(cosineSimilarity(Oj,False))[:numEvals]
+		EValFull[j,:] = LA.eigvals(cosineSimilarity(Oj,False))
+
+	EVALMeanP = np.mean(EValList, axis = 1)
+	EValList = EValList.T
+	# EValFull = EValFull.T
+	EVALMean = np.mean(EValFull, axis = 1)
+	
+
+	numLayers = len(OList)
+	xLabel = ["Layer #%s"%i for i in range(numLayers)]
+	xpos = [i for i in range(len(xLabel))]
+
+	fig = plt.figure()
+	plt.style.use('ggplot')
+	plt.rcParams['axes.facecolor'] = 'white'
+	plt.gca().set_frame_on(True)
+	plt.title("Mean of First %s Eigenvalues of Cosine Similarity of Neurons vs Layers"%numEvals, fontsize=14)
+	plt.ylabel("Eigenvalue",fontsize=14)
+	plt.xlabel("Layer Number",fontsize=14)
+
+	# for e in range(numEvals):
+	# 	plt.plot(xpos, EValList[e,:], label = "Lambda %s"%(e+1,))
+	plt.plot(xpos, EValList[0,:], label = "Lambda 1")
+	# plt.plot(xpos, EVALMean, label = "Lambda : Mean")
+	plt.plot(xpos, EVALMeanP, label = "Lambda : Mean:First-%s"%numEvals)
+
+	plt.xticks(xpos, xLabel,rotation = 90)
+
+	plt.legend()
+	plt.tight_layout()
+	plt.savefig(saveTo)
+	plt.clf()
+
+
+
