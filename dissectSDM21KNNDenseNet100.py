@@ -1008,13 +1008,13 @@ class DenseNet(nn.Module):
 		out = x6 = out.view(x.size(0), -1) # check whether x.size(0) is batch size or not
 		out = x7 = self.fc(out)
 		out = x8 = FU.log_softmax(out)
-		return out,(x2,x3,x5,x7,x8)
+		return out,(x2,x3,x4,x5)
 
 	def countConvLayers(self):
-		return 5
+		return 4
 
 	def countPosLayers(self):
-		return 5
+		return 4
 
 # model = LeNet5MNIST(numClasses)
 

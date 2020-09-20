@@ -1265,7 +1265,7 @@ def floatMatrixToGS(matrix,saveAs,magFactorY = 1,magFactorX = 1): # To Visualize
 	# max = matrix.max()
 	# matrix.__imul__(255/max)
 	img = PIL.Image.fromarray(matrix)
-	img = img.convert('L')
+	img = img.convert('RGB')
 	img = img.resize((magFactorY*matrix.shape[0],magFactorX*matrix.shape[1]))
 	img.save(saveAs)
 
@@ -1636,14 +1636,18 @@ def topMaskedImagesPerLatentFactor(vF,iF,P,indexToImagePath,saveTo):
 				latentImage = tuple(latentImage)
 				M = np.dstack(latentImage)
 				latentFactorImg = PIL.Image.fromarray(M)
-				latentFactorImg = latentFactorImg.convert('L')
+				latentFactorImg = latentFactorImg.convert('RGB')
 				latentFactorImgArr = np.array(latentFactorImg)
 				# latentFactorImgArrMean = latentFactorImgArr.mean()
 				# latentFactorImgArr[latentFactorImgArr > 10] = 1
-				latentFactorImgArr[latentFactorImgArr <= 10] = 0
-				imgc0[latentFactorImgArr == 0] = 0
-				imgc1[latentFactorImgArr == 0] = 0
-				imgc2[latentFactorImgArr == 0] = 0
+				# pdb.set_trace()
+				# latentFactorImgArr[latentFactorImgArr <= 10] = 0
+				# imgc0[latentFactorImgArr == 0] = 0
+				# imgc1[latentFactorImgArr == 0] = 0
+				# imgc2[latentFactorImgArr == 0] = 0
+				imgc0[latentFactorImgArr[:,:,0] <= np.median(latentFactorImgArr[:,:,0])] = 0
+				imgc1[latentFactorImgArr[:,:,1] <= np.median(latentFactorImgArr[:,:,1])] = 0
+				imgc2[latentFactorImgArr[:,:,2] <= np.median(latentFactorImgArr[:,:,2])] = 0
 
 			elif numChannels == 1:
 				M = latentImage[l-1]

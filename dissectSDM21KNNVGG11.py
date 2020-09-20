@@ -2458,7 +2458,7 @@ else:
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 		generateLatentActivations(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),title1 = "Neuron Latent Representations", xLabel1 = "Latent Dimension", yLabel1 = "Neurons",title3='Cosine Similarity w.r.t Neurons',xLabel3 ='Latent Factor',yLabel3 ='Latent Factor')
-		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),3)
+		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),10)
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
 
@@ -2473,7 +2473,7 @@ else:
 
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations))
 		generateLatentActivations(P+O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations),title1 = "Neuron Latent Representations", xLabel1 = "Latent Dimension", yLabel1 = "Neurons",title3='Cosine Similarity w.r.t Neurons',xLabel3 ='Latent Factor',yLabel3 ='Latent Factor')
-		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),3)
+		neuralEvalAnalysis(O,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,latentActivations,"EVALvsLayersPlot.png"),10)
 		# Because D[0] is A[0] of the original setup
 		os.chdir(os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging))
 
