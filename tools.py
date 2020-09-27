@@ -771,6 +771,47 @@ def analyzeFKNNPlots1(distMat,entArr,num2ClassDict,num2SuperClassDict,classLabel
 			barPlot(distMat[revSortedEntArrInd[i],:],["LF-%s"%i for i in range(len(distMat[revSortedEntArrInd[i],:]))],"Class-%s"%classLabelListRSTrueLabel[i],"#Nearest Neighbours", "Discovered Concepts", os.path.join(saveTo,'perExamplePlots','ImgNum_%s.png'%i) )
 	
 
+def analyzeFKNNPlots2(distMat,entArr,num2ClassDict,num2SuperClassDict,classLabelList,superClassLabelList,pathList,predList,saveTo):
+	if not os.path.exists(saveTo):
+		os.makedirs(saveTo)
+		os.makedirs(os.path.join(saveTo,'perExamplePlots'))
+
+	sortedArrInd = np.argsort(entArr)
+	revSortedEntArrInd = np.flipud(sortedArrInd)
+	# pdb.set_trace()
+	classLabelListRS = [classLabelList[i] for i in revSortedEntArrInd]
+	classLabelListS = [classLabelList[i] for i in sortedArrInd]
+	superClassLabelListRS = [superClassLabelList[i] for i in revSortedEntArrInd]
+	predListRS = [predList[i] for i in revSortedEntArrInd]
+	predListS = [predList[i] for i in sortedArrInd]
+	classLabelListRSTrueLabel = [num2ClassDict[classLabel] for classLabel in classLabelListRS]
+	predListRSTrueLabel = [num2ClassDict[predclassLabel] for predclassLabel in predListRS]
+	superClassLabelListRSTrueLabel = [num2SuperClassDict[sclassLabel] for sclassLabel in superClassLabelListRS]
+
+	accVsEntListBool = [classLabelListS[i] == predListS[i] for i in range(len(predListS))]
+	accVsEntList = [100*sum(accVsEntListBool[:i+1])/(i+1) for i in range(len(accVsEntListBool))]
+
+
+	pathListRS = [pathList[i] for i in revSortedEntArrInd]
+	# pdb.set_trace()
+	fig = plt.figure()
+	plt.style.use('ggplot')
+	plt.rcParams['axes.facecolor'] = 'white'
+	plt.gca().set_frame_on(True)
+	plt.title("Accuracy vs Impurity of K-NN", fontsize=20)
+	plt.ylabel("Accuracy",fontsize=20)
+	plt.xlabel("Impurity of K-NN",fontsize=20)
+	plt.plot(accVsEntList, label = "Accuracy")
+	plt.legend()
+	plt.tight_layout()
+	plt.savefig(os.path.join(saveTo,"AccvsImpurity.png"))
+	plt.clf()
+	# pdb.set_trace()
+	with open(os.path.join(saveTo,'ImagePathsPredLabel.txt'),'w') as fH:
+		for i,path in enumerate(pathListRS):
+			fH.write('ImgNum_%s\tEntropy_%s\tClass_%s\tSuperClass_%s\tPredictedClass_%s\t%s\n'%(i,revSortedEntArrInd[i],classLabelListRSTrueLabel[i],superClassLabelListRSTrueLabel[i],predListRSTrueLabel[i],path))
+			# barPlot(distMat[revSortedEntArrInd[i],:],["LF-%s"%i for i in range(len(distMat[revSortedEntArrInd[i],:]))],"Class-%s"%classLabelListRSTrueLabel[i],"#Nearest Neighbours", "Discovered Concepts", os.path.join(saveTo,'perExamplePlots','ImgNum_%s.png'%i) )
+	
 
 	
 def neuralEvalAnalysis(OList,saveTo, numEvals=7):

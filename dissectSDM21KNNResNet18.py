@@ -49,7 +49,7 @@ import operator
 import networkx as nx
 from networkx.algorithms import bipartite
 from collections import Counter
-from tools import analyzeFKNN, analyzeFKNNPlots1, neuralEvalAnalysis
+from tools import analyzeFKNN, analyzeFKNNPlots1, neuralEvalAnalysis, analyzeFKNNPlots2
 
 warnings.filterwarnings("ignore")
 
@@ -954,7 +954,12 @@ def testval1(): # add X-val later
 	model.eval()
 	val1_loss = 0
 	correct = 0
+	targetList = []
+	supertargetList = []
+	predList = []
 	for data, target, superTarget, datapath in val1_loader:
+		targetList.append(int(target))
+		supertargetList.append(int(superTarget))
 		# data, target = Variable(data, volatile=True), Variable(target)
 		data, target = Variable(data, volatile=True).cuda(), Variable(target).cuda() # gpu
 		output,act = model(data)
@@ -964,13 +969,14 @@ def testval1(): # add X-val later
 		val1_loss += FU.nll_loss(output, target).item()
 		# get the index of the max log-probability
 		pred = output.data.max(1, keepdim=True)[1]
+		predList.append(int(pred.cpu().numpy()[0][0]))
 		correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
 	val1_loss /= len(val1_loader.dataset)
 	print('\nVal set 1: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
 		val1_loss, correct, len(val1_loader.dataset),
 		100. * correct / len(val1_loader.dataset)))
-	return val1_loss,100. * correct / len(val1_loader.dataset)
+	return val1_loss,100. * correct / len(val1_loader.dataset),predList
 
 
 def testAdv1(): # add X-val later
@@ -1040,7 +1046,6 @@ def probeVal1():
 		# pdb.set_trace()
 	# model.cuda()
 	return D,A,targetList, supertargetList, datapathList
-
 
 
 def listOfArraysToMatByCol(loa):
@@ -2159,7 +2164,12 @@ else:
 		else:
 			print("Path List not same")
 
-	
+	if CIFARtrain.classToNum == CIFARval1.classToNum: #classListTrain == classListTest or classBased=='False':
+			testval1Loss, testval1Acc, predList = testval1()
+			print("Accuracy on the test set: %s"%testval1Acc)
+			print("Loss on the test set: %s"%testval1Loss)
+			# netLossVal1.append(float(testval1Loss))
+			# netAccVal1.append(float(testval1Acc))
 
 	
 	# pdb.set_trace()
@@ -2416,6 +2426,7 @@ else:
 		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.classSampledImagePaths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		knnLFDistMat, knnLFEnt = analyzeFKNN(F.T,targetList)
 		analyzeFKNNPlots1(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.classSampledLabels,CIFARval1.superclassSampledLabels,dpl,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis1'))
+		analyzeFKNNPlots2(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.classSampledLabels,CIFARval1.superclassSampledLabels,dpl,predList,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis2'))
 	else:
 		vF,iF,lF = analyzeF(F.T,CIFARval1.all_sampled_labels) # This needs to be fixed because we need index to class mapping,
 		SvF,SiF,SlF = analyzeF(F.T,CIFARval1.all_sampled_super_labels)
@@ -2423,6 +2434,7 @@ else:
 		topMaskedImagesPerLatentFactor(vF,iF,P,CIFARval1.all_sampled_image_paths,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'topImagesPerLatentFactor','Masked'))
 		knnLFDistMat, knnLFEnt = analyzeFKNN(F.T,targetList)
 		analyzeFKNNPlots1(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.all_sampled_labels,CIFARval1.all_sampled_super_labels,dpl,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis1'))
+		analyzeFKNNPlots2(knnLFDistMat,knnLFEnt,CIFARval1.numToClass,CIFARval1.superClassSetReverse,CIFARval1.all_sampled_labels,CIFARval1.all_sampled_super_labels,dpl,predList,os.path.join(outputFolderName,epochFolder,analysisType,parentDirLatentImaging,topClassesLatentFactor,'KNNbasedAnalysis2'))
 	#F.T used because of the notational change
 	# somewhere downstream to properly populate lF
 		# NvF = normalize(vF,axis = 0)
