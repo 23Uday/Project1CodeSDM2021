@@ -24,3 +24,36 @@ Use the following command to get help:
 ```
 python3 dissectSDM21KNNResNet18.py -h
 ```
+usage: dissectSDM21KNNResNet18.py [-h]                                  rootDir rootDirTest networkFile
+                                  outputFolderName NetworkName Rank1 numGroups
+                                  maxIters lmbdaF lmbdaTV lmbdaOrtho
+                                  samplingFactor samplingFactorTest lr wd
+                                  numEpochs {sgd,adam,rmsprop}
+                                  {random,ID,NNDSVD} {True,False} {True,False}
+                                  {True,False}
+
+positional arguments:
+-  rootDir             Enter the name of root folder which containts the data
+                      subfolders :
+ - rootDirTest         Enter the name of root folder which containts the test
+                      data subfolders :
+ - networkFile         Enter the name of root folder which containts the
+                      Network :
+-  outputFolderName    Enter the name(Path) of the Output Folder :
+-  NetworkName         Enter the name(Path) of the network file :
+-  Rank1               Enter Rank 1 :
+-  numGroups           Enter the number of groups:
+-  maxIters            Enter Max no. of iterations:
+-  lmbdaF              Enter lambda F:
+-  lmbdaTV             Enter lambda TV:
+-  lmbdaOrtho          Enter orthogonality penalty:
+-  samplingFactor      Enter the ratio of dataset to be used:
+-  samplingFactorTest  Enter the ratio of dataset to be used:
+-  lr                  learning rate for SGD to be used:
+-  wd                  Enter the weight decay:
+-  numEpochs           Enter the number of epochs:
+-  {sgd,adam,rmsprop}  Enter the optimization algorithm
+-  {random,ID,NNDSVD}  Enter the initialization for P
+-  {True,False}        Enter if class based training is required
+-  {True,False}        Enter true if Data matrices have to be ignored
+-  {True,False}        Enter true if F matrix is to have group sparsity
