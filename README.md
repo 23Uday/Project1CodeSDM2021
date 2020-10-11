@@ -13,5 +13,8 @@ The above link contains 3 Items:-
 3. Pytorch 1.4.0 and above
 4. Scipy 1.4.1 and above
 
-## Command to Run the experiment
-python3 dissectSDM21KNNResNet18.py /data/usain001/data/Cifar100SuperClass/train/ /data/usain001/data/Cifar100SuperClass/valKDD/ /data/usain001/outputs/Paper1/AdvTesting/Test3FullValAdvCifar100/lr\:0.001-wd\:-1e-05/Resnet18Cifar100 /data/usain001/outputs/Paper1/KNNanalysis/26Sep/Trial5SavedResNetFFF/ ResNet18Cifar100 20 20 50 1 1 1 1 1 0.001 0.00001 100 sgd NNDSVD False False False
+## Command Template to Run the experiment
+```
+python3 dissectSDM21KNNResNet18.py FullPathToCifar100SuperClass/train/ FullPathToCifar100SuperClass/valKDD/ PathToPretrainedResnet18/Resnet18Cifar100 OutputFolderDirectory ResNet18Cifar100 20 20 50 1 1 1 1 1 0.001 0.00001 100 sgd NNDSVD False False False
+```
+The parameter values shown were used for experimentation.
