@@ -14,7 +14,13 @@ The above link contains 3 Items:-
 4. Scipy 1.4.1 and above
 
 ## Command Template to Run the experiment
+Prototype Command:
 ```
 python3 dissectSDM21KNNResNet18.py FullPathToCifar100SuperClass/train/ FullPathToCifar100SuperClass/valKDD/ PathToPretrainedResnet18/Resnet18Cifar100 OutputFolderDirectory ResNet18Cifar100 20 20 50 1 1 1 1 1 0.001 0.00001 100 sgd NNDSVD False False False
 ```
 The parameter values shown were used for experimentation.
+
+Use the following command to get help:
+```
+python3 dissectSDM21KNNResNet18.py -h
+```
